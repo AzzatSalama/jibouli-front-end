@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <!-- Same head section as gererEmployees.html -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion des Commandes - Jibouli</title>
+    <script src="https://unpkg.com/vue@3.5.13/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <!-- <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script> -->
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <!-- sweet alert -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <style>
+        /* Same custom tooltip styles as gererEmployees.html */
+    </style>
+</head>
+
+<body class="bg-gray-100">
+    <div id="app" class="min-h-screen">
+        <!-- Header -->
+        <nav class="bg-white shadow">
+            <div class="px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex items-center">
+                        <!-- Burger Button -->
+                        <button @click="isSidebarOpen = !isSidebarOpen"
+                            class="mr-2 p-2 text-gray-600 hover:bg-gray-100 rounded-lg" aria-label="Open sidebar">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        </button>
+                        <h1 class="text-xl font-bold">Tableau de Bord Administrateur</h1>
+                    </div>
+                </div>
+            </div>
+        </nav>
+        <!-- Sidebar Backdrop -->
+        <div v-show="isSidebarOpen" @click="isSidebarOpen = false"
+            class="fixed inset-0 z-20 bg-black opacity-50 transition-opacity"></div>
+
+        <!-- Sidebar -->
+        <aside class="fixed inset-y-0 left-0 z-30 w-64 bg-white shadow-lg transform transition-all duration-300"
+            :class="isSidebarOpen ? 'translate-x-0' : '-translate-x-full'">
+            <div class="p-4">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Jibouli</h2>
+                <nav class="space-y-1">
+                    <a href="/dashboard.html"
+                        class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition">
+                        📊 Tableau de Bord
+                    </a>
+                    <a href="/gererEmployees.html"
+                        class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition">
+                        👥 Employées
+                    </a>
+                    <a href="/gererLivreurs.html"
+                        class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition">
+                        🛵 Livreurs
+                    </a>
+                    <a href="/gererOrders.html"
+                        class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition">
+                        📦 Commandes
+                    </a>
+                    <a href="/gererPartners.html"
+                        class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition">
+                        🤝 Partenaires
+                    </a>
+                </nav>
+            </div>
+        </aside>
+        <!-- Main content -->
+        <main class="p-6">
+            <div class="mx-auto">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Gestion des Commandes</h2>
+                    <div class="flex flex-row gap-3">
+                        <button @click="openCancellationModal" v-if="canceledOrders.length>0"
+                            class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
+                            Ajouter Raison d'Annulation
+                        </button>
+                        <button @click="showOrderForm()"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                            + Nouvelle Commande
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Orders Table -->
+                <div class="bg-white rounded-lg shadow overflow-x-auto p-2">
+                    <table id="ordersTable" class="min-w-full divide-y divide-gray-200 display">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Livreur</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <tr v-for="order in orders" :key="order.id">
+                                <td class="px-6 py-4 whitespace-nowrap">#{{ order.id }}</td>
+                                <td class="px-6 py-4">
+                                    <div class="font-medium">{{ order.client.client_name }}</div>
+                                    <div class="text-gray-500">{{ order.client.client_phone }}</div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap capitalize">
+                                    <span :class="statusClasses(order.status)" class="px-2 py-1 rounded-full text-sm">
+                                        {{ order.status }}
+                                    </span>
+                                    <!-- <button v-if="order.status === 'accepted'" @click="showDriverLocation(order.id)"
+                                        class="ml-2 p-2 bg-yellow-100 text-yellow-600 rounded-full hover:bg-yellow-200 transition">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                    </button> -->
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    {{ order.delivery_person?order.delivery_person.delivery_person_name : 'Non assigné'
+                                    }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    {{ formatDate(order.created_at) }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap space-x-2">
+                                    <button @click="editOrder(order)"
+                                        class="p-2 bg-green-100 text-green-600 rounded-full hover:bg-green-200 transition">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button @click="deleteOrder(order.id)"
+                                        class="p-2 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                    <button @click="showOrderDetails(order)"
+                                        class="p-2 bg-purple-100 text-purple-600 rounded-full hover:bg-purple-200 transition">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <!-- Order Modal -->
+        <div v-if="showOrderModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+            <div class="bg-white rounded-lg p-6 w-full max-w-2xl">
+                <h3 class="text-xl font-bold mb-4">
+                    {{ newOrder.id ? 'Modifier Commande' : 'Nouvelle Commande' }}
+                </h3>
+                <!-- Add form fields here -->
+                <form @submit.prevent="saveOrder" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-1">
+                        <!-- Nom Client -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Nom Client</label>
+                            <input v-model="newOrder.client_name" type="text" required
+                                class="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 px-4 py-2">
+                        </div>
+                        <!-- Téléphone Client with searchable dropdown -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Téléphone Client</label>
+                            <div class="relative">
+                                <input v-model="newOrder.client_phone" type="tel" required placeholder="+212xxxxxxxxx"
+                                    @input="searchClientsByPhone"
+                                    class="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 px-4 py-2">
+                                <div v-if="phoneSuggestions.length > 0"
+                                    class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg mt-1 max-h-48 overflow-y-auto shadow-lg">
+                                    <ul>
+                                        <li v-for="client in phoneSuggestions" :key="client.id"
+                                            @click="selectClient(client)"
+                                            class="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm">
+                                            {{ client.phone }}
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Demande Client -->
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700">Demande Client</label>
+                            <textarea v-model="newOrder.request" required rows="3"
+                                class="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 px-4 py-2"></textarea>
+                        </div>
+                        <!-- Adresse Client -->
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700">Adresse Client</label>
+                            <textarea v-model="newOrder.client_address" required rows="3"
+                                class="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 px-4 py-2"></textarea>
+                        </div>
+                        <!-- Note Client -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Note Client</label>
+                            <textarea v-model="newOrder.client_notes" rows="3"
+                                class="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 px-4 py-2"></textarea>
+                        </div>
+                        <!-- Votre Remarque -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Votre Remarque</label>
+                            <textarea v-model="newOrder.employee_notes" rows="3"
+                                class="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 px-4 py-2"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="flex flex-col md:flex-row justify-end gap-4 mt-6">
+                        <button type="button" @click="cancelOrderForm"
+                            class="px-2.5 md:px-5 py-1 md:py-2 text-gray-700 bg-gray-100 rounded-lg shadow-sm hover:bg-gray-200 transition">
+                            Annuler
+                        </button>
+                        <button type="submit" @click=""
+                            class="px-2.5 md:px-5 py-1 md:py-2 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition whitespace-nowrap">
+                            {{ newOrder.id ? 'Modifier' : 'Créer' }} Commande
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+
+        <!-- Order Details Modal -->
+        <div v-if="showDetailsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg p-6 w-full max-w-5xl">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold">Détails de la Commande #{{ currentOrder.id }}</h3>
+                    <button @click="showDetailsModal = false"
+                        class="text-lg rounded-full px-2.5 py-1 bg-red-200 text-red-500 hover:bg-red-300 hover:text-red-600">
+                        X
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Client Section -->
+                    <div class="md:col-span-2 bg-gray-50 p-4 rounded-lg">
+                        <h4 class="font-semibold mb-2 text-blue-600">Informations Client</h4>
+                        <div class="gap-2 grid grid-cols-2">
+                            <p><span class="font-medium">Nom:</span> {{ currentOrder.client.client_name }}</p>
+                            <p>
+                                <span class="font-medium">Téléphone:</span> {{ currentOrder.client.client_phone }}
+                                <a :href="'tel:' + currentOrder.client.client_phone"
+                                    class="ml-2 p-2 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition">
+                                    <i class="fas fa-phone"></i>
+                                </a>
+                                <a :href="'https://wa.me/' + currentOrder.client.client_phone" target="_blank"
+                                    class="ml-2 p-2 bg-green-100 text-green-600 rounded-full hover:bg-green-200 transition">
+                                    <i class="fab fa-whatsapp"></i>
+                                </a>
+                            </p>
+                            <p><span class="font-medium col-span-2">Adresse:</span> {{
+                                currentOrder.client.client_address }}</p>
+                        </div>
+                    </div>
+
+                    <!-- User Section -->
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h4 class="font-semibold mb-2 text-green-600">Utilisateur Responsable</h4>
+                        <div class="gap-2 grid grid-cols-1 md:grid-cols-2">
+                            <p><span class="font-medium">Nom:</span> {{ currentOrder.user.name }}</p>
+                            <p><span class="font-medium">Téléphone:</span> {{ currentOrder.user.phone || "***" }}
+                            </p>
+                            <p class="capitalize" v-if="currentOrder.user.status"><span
+                                    class="font-medium">Statut:</span>
+                                <span :class="statusClasses(currentOrder.user.status)"
+                                    class="px-2 py-1 rounded-full text-sm">
+                                    {{ currentOrder.user.status }}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Delivery Person Section -->
+                    <div class="bg-gray-50 p-4 rounded-lg" v-if="currentOrder.delivery_person">
+                        <h4 class="font-semibold mb-2 text-purple-600">Livreur</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2">
+                            <p class="whitespace-nowrap capitalize"><span class="font-medium">Nom:</span> {{
+                                currentOrder.delivery_person.delivery_person_name }}</p>
+                            <p class="whitespace-nowrap capitalize">
+                                <span class="font-medium">Téléphone:</span>
+                                {{ currentOrder.delivery_person.delivery_phone }}
+                                <a :href="'tel:' + currentOrder.delivery_person.delivery_phone"
+                                    class="ml-2 p-2 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition">
+                                    <i class="fas fa-phone"></i>
+                                </a>
+                            </p>
+                            <p class="whitespace-nowrap capitalize"><span class="font-medium">Solde:</span> {{
+                                currentOrder.delivery_person.balance }} MAD
+                            </p>
+                            <p class="whitespace-nowrap capitalize"><span class="font-medium">Disponibilité: </span>
+                                <span
+                                    :class="currentOrder.delivery_person.is_available ? 'text-green-600' : 'text-red-600'">
+                                    {{ currentOrder.delivery_person.is_available ? 'Disponible' : 'Occupé' }}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Order Details -->
+                    <div class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <div class="flex justify-between">
+                                <h4 class="font-semibold mb-2 text-yellow-600">Détails Commande</h4>
+                                <button @click="showOrderActions(currentOrder)"
+                                    class="text-sm font-bold text-blue-600 hover:underline">
+                                    Voir plus ->
+                                </button>
+                            </div>
+                            <div class="space-y-2">
+                                <p><span class="font-medium">Statut: </span>
+                                    <span :class="statusClasses(currentOrder.status)"
+                                        class="px-2 py-1 rounded-full text-sm capitalize">
+                                        {{ currentOrder.status }}
+                                    </span>
+                                </p>
+                                <p><span class="font-medium">Demande:</span> {{ currentOrder.request }}</p>
+                                <p><span class="font-medium">Créée le:</span> {{ formatDate(currentOrder.created_at) }}
+                                </p>
+                                <p><span class="font-medium">Dernière mise à jour:</span> {{
+                                    formatDate(currentOrder.updated_at) }}</p>
+                                <p v-if="currentOrder.status === 'delivered'"
+                                    class="bg-green-100 text-green-800 font-bold p-4 rounded-lg shadow-md">
+                                    Temps de livraison:
+                                    <span>
+                                        {{
+                                        Math.floor((new Date(currentOrder.delivered_canceled_at) - new
+                                        Date(currentOrder.created_at)) / 3600000) + ' heures ' +
+                                        Math.floor(((new Date(currentOrder.delivered_canceled_at) - new
+                                        Date(currentOrder.created_at)) % 3600000) / 60000) + ' minutes ' +
+                                        Math.floor((((new Date(currentOrder.delivered_canceled_at) - new
+                                        Date(currentOrder.created_at)) % 3600000) % 60000) / 1000) + ' secondes'
+                                        }}
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+
+                        <div class="bg-gray-50 p-4 rounded-lg">
+                            <h4 class="font-semibold mb-2 text-red-600">Notes & Remarques</h4>
+                            <div class="space-y-2">
+                                <p><span class="font-medium">Notes Client:</span>
+                                    {{ currentOrder.client_notes || 'Aucune note client' }}</p>
+                                <p><span class="font-medium">Remarques Utilisateur:</span>
+                                    {{ currentOrder.user_notes || 'Aucune remarque utilisateur' }}</p>
+                                <p v-if="currentOrder.delivery_person_notes"><span class="font-medium">Remarques
+                                        Livreur:</span>
+                                    {{ currentOrder.delivery_person_notes }}</p>
+                                <div v-if="currentOrder.cancellation_cause"
+                                    class="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg shadow-md">
+                                    <h4 class="font-semibold text-lg mb-2">Raison d'annulation</h4>
+                                    <p class="text-sm">{{ currentOrder.cancellation_cause.cause }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Order Actions Modal -->
+        <div v-if="showActionsOnOrderModal"
+            class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg p-6 w-full max-w-4xl">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold">Historique des Actions pour la Commande #{{ currentOrder.id }}</h3>
+                    <button @click="showActionsOnOrderModal = false"
+                        class="text-lg rounded-full px-2.5 py-1 bg-red-200 text-red-500 hover:bg-red-300 hover:text-red-600">
+                        X
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Utilisateur
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Action</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Détails</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <tr v-for="action in orderActions" :key="action.id">
+                                <td class="px-6 py-4 whitespace-nowrap">{{ formatDate(action.action_performed_at) }}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">{{ action.user_name }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap capitalize">{{ action.action }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">{{ action.details }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Map Modal -->
+        <div v-if="showMapModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg p-6 w-full max-w-2xl">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-bold">Position du Livreur</h3>
+                    <p @click="showMapModal = false"
+                        class="cursor-pointer text-lg rounded-full px-2.5 py-1 bg-red-200 text-red-500 hover:bg-red-300 hover:text-red-600">
+                        X</p>
+                </div>
+                <div id="mapContainer" class="h-64 mb-4 rounded-lg bg-gray-100"></div>
+                <div class="flex items-center gap-2">
+                    <input :value="trackingLink" ref="trackingInput" readonly
+                        class="flex-1 border rounded-lg px-3 py-2">
+                    <button @click="copyTrackingLink"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                        Copier le lien
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cancelation reason Modal -->
+        <div v-if="showCancellationModal"
+            class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg p-6 w-full max-w-md">
+                <h3 class="text-xl font-bold mb-4">Ajouter une raison d'annulation</h3>
+                <form @submit.prevent="submitCancellationReason">
+                    <div class="space-y-4">
+                        <!-- Canceled Orders Dropdown -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Commande annulée</label>
+                            <select v-model="selectedOrder" required
+                                class="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 px-4 py-2">
+                                <option value="" disabled>Sélectionner une commande</option>
+                                <option v-for="order in canceledOrders" :key="order.id" :value="order.id">
+                                    #{{ order.id }} - {{ order.client.client_name }} ({{ formatDate(order.created_at)
+                                    }})
+                                </option>
+                            </select>
+                        </div>
+
+                        <!-- Cancellation Reason Textarea -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Raison d'annulation</label>
+                            <textarea v-model="cancellationReason" required rows="4"
+                                class="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 px-4 py-2"
+                                placeholder="Décrire la raison d'annulation..."></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Modal Footer -->
+                    <div class="mt-6 flex justify-end gap-4">
+                        <button type="button" @click="closeCancellationModal"
+                            class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition">
+                            Annuler
+                        </button>
+                        <button type="submit"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                            Enregistrer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- data table -->
+    <script src="includes/jquery-3.7.0.js"></script>
+    <script src="includes/jquery.dataTables.min.js"></script>
+    <script src="includes/datatables.tailwind.js"></script>
+
+    <script>
+        const app = Vue.createApp({
+            data() {
+                return {
+                    apiUrl: 'http://jibouli.test/api',
+                    orders: [],
+                    showOrderModal: false,
+                    isNewOrder: true,
+                    newOrder: {
+                        client_phone: '',
+                        client_name: '',
+                        client_address: '',
+                        request: '',
+                        client_notes: '',
+                        employee_notes: ''
+                    },
+                    clients: [], // Would be populated from API
+                    phoneSuggestions: [],
+                    dataTable: null,
+
+                    showDetailsModal: false,
+                    showMapModal: false,
+                    currentOrder: null,
+                    trackingLink: '',
+                    map: null,
+
+                    showCancellationModal: false,
+                    canceledOrders: [],
+                    selectedOrder: null,
+                    cancellationReason: '',
+
+                    orderActions: [],
+                    showActionsOnOrderModal: false,
+
+                    isSidebarOpen: false
+                }
+            },
+            mounted() {
+                // Get token from localStorage
+                this.token = localStorage.getItem('adminJibouli-token');
+
+                if (!this.token) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'حدث خطأ!',
+                        text: "أنت غير مسجل الدخول.",
+                        confirmButtonText: 'حسنا'
+                    }).then(() => {
+                        window.location.href = "index.html"
+                    });
+                    return;
+                }
+
+                // Set default headers
+                axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`;
+                axios.defaults.headers.common['Accept'] = 'application/json';
+                axios.defaults.headers.common['Content-Type'] = 'application/json';
+
+                // Set up axios interceptors
+                axios.interceptors.request.use(config => {
+                    if (this.token) {
+                        config.headers.Authorization = `Bearer ${this.token}`;
+                    }
+                    return config;
+                });
+                // Same auth and axios setup as gererEmployees.html
+                this.initializeDataTable();
+                this.fetchOrders();
+                this.fetchClients();
+            },
+            methods: {
+                initializeDataTable() {
+                    this.$nextTick(() => {
+                        this.dataTable = $('#ordersTable').DataTable({
+                            // language: {
+                            //     url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/fr-FR.json'
+                            // },
+                            columnDefs: [
+                                { orderable: false, targets: [5] } // Disable sorting on actions column
+                            ]
+                        });
+                    });
+                },
+
+                async fetchOrders() {
+                    try {
+                        const response = await axios.get(`${this.apiUrl}/orders`);
+                        this.orders = response.data;
+                        this.canceledOrders = this.orders.filter(order => order.status == 'canceled' && (order.cancellation_cause == null || order.cancellation_cause == ''));
+                        this.dataTable.destroy();
+                        this.initializeDataTable();
+                    } catch (error) {
+                        console.error('Error fetching orders:', error);
+                    }
+                },
+                async fetchClients() {
+                    try {
+                        const response = await axios.get(`${this.apiUrl}/dashboard/clients`);
+                        this.clients = response.data;
+                    } catch (error) {
+                        console.error('Error fetching orders:', error);
+                    }
+                },
+
+                async saveOrder() {
+                    try {
+                        const url = this.newOrder.id
+                            ? `${this.apiUrl}/order/${this.newOrder.id}/edit`
+                            : `${this.apiUrl}/order`;
+
+                        const method = 'post';
+
+                        await axios[method](url, this.newOrder);
+                        this.fetchOrders();
+                        this.cancelOrderForm();
+                        Swal.fire('Succès!', 'Commande sauvegardée', 'success');
+                    } catch (error) {
+                        Swal.fire('Erreur!', error.response?.data?.message || 'Erreur de sauvegarde', 'error');
+                        console.error(error);
+                    }
+                },
+
+                // async createOrder() {
+                //     try {
+                //         const response = await axios.post(`${this.apiUrl}/order`, {
+                //             ...this.newOrder,
+                //         });
+
+                //         Swal.fire({
+                //             icon: 'success',
+                //             title: 'Succès',
+                //             text: 'Commande créée avec succès',
+                //             timer: 1000,
+                //             showConfirmButton: false
+                //         });
+                //         this.showOrderForm = false;
+                //         this.cancelOrderForm();
+                //         this.loadDashboardData();
+                //     } catch (error) {
+                //         Swal.fire({
+                //             icon: 'error',
+                //             title: 'Erreur',
+                //             text: error.response?.data?.message || 'Échec de la création de commande',
+                //             confirmButtonText: 'OK'
+                //         });
+                //         console.error(error);
+                //     }
+                // },
+                cancelOrderForm() {
+                    this.showOrderModal = false;
+                    this.newOrder = {
+                        client_phone: '',
+                        client_name: '',
+                        client_address: '',
+                        request: '',
+                        client_notes: '',
+                        employee_notes: ''
+                    }
+                },
+                async deleteOrder(id) {
+                    Swal.fire({
+                        title: 'Êtes-vous sûr?',
+                        text: "Vous ne pourrez pas revenir en arrière!",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#3085d6',
+                        cancelButtonColor: '#d33',
+                        confirmButtonText: 'Oui',
+                        cancelButtonText: 'Annuler'
+                    }).then(async (result) => {
+                        if (result.isConfirmed) {
+                            try {
+                                await axios.delete(`${this.apiUrl}/order/${id}`);
+                                Swal.fire(
+                                    'Supprimé!',
+                                    'La commande a été supprimé avec succès.',
+                                    'success'
+                                );
+                                this.fetchOrders();
+                            } catch (error) {
+                                Swal.fire(
+                                    'Erreur!',
+                                    'Une erreur est survenue lors de la suppression.',
+                                    'error'
+                                );
+                                console.error('Error deleting employee:', error);
+                            }
+                        }
+                    });
+                },
+
+                showOrderForm() {
+                    this.showOrderModal = true;
+                },
+
+                async showOrderDetails(order) {
+                    try {
+                        const response = await axios.get(`${this.apiUrl}/order/${order.id}`);
+                        this.currentOrder = response.data;
+                        this.showDetailsModal = true;
+                    } catch (error) {
+                        Swal.fire('Erreur', 'Impossible de récupérer les détails de la commande', 'error');
+                        console.error('Error fetching order details:', error);
+                    }
+                },
+                async showOrderActions(order) {
+                    try {
+                        const response = await axios.get(`${this.apiUrl}/order/${order.id}/actions`);
+                        this.orderActions = response.data;
+                        console.log(response.data)
+                        this.showActionsOnOrderModal = true;
+                    } catch (error) {
+                        Swal.fire('Erreur', 'Impossible de récupérer les actions de la commande', 'error');
+                        console.error('Error fetching order actions:', error);
+                    }
+                },
+
+                async showDriverLocation(orderId) {
+                    try {
+                        const fetchDriverLocation = async () => {
+                            try {
+                                const response = await axios.get(`${this.apiUrl}/order/${orderId}/driverLocation`);
+                                this.trackingLink = `https://jibouli.com/trackOrder.html?order=${orderId}`;
+
+                                this.$nextTick(() => {
+                                    // Initialize or update map
+                                    if (!this.map) {
+                                        this.map = L.map('mapContainer').setView(
+                                            [response.data.latitude, response.data.longitude],
+                                            13
+                                        );
+                                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(this.map);
+                                    } else {
+                                        this.map.setView([response.data.latitude, response.data.longitude], 13);
+                                    }
+                                    L.marker([response.data.latitude, response.data.longitude]).addTo(this.map);
+                                });
+                            } catch (error) {
+                                console.error('Error fetching driver location:', error);
+                            }
+                        };
+
+                        this.showMapModal = true;
+                        await fetchDriverLocation();
+
+                        // Refetch location every 10 seconds while modal is open
+                        const intervalId = setInterval(async () => {
+                            if (!this.showMapModal) {
+                                clearInterval(intervalId);
+                            } else {
+                                await fetchDriverLocation();
+                            }
+                        }, 10000);
+                    } catch (error) {
+                        Swal.fire('Erreur', 'Position du livreur non disponible', 'error');
+                    }
+                },
+
+                copyTrackingLink() {
+                    this.$refs.trackingInput.select();
+                    document.execCommand('copy');
+                    Swal.fire('Succès', 'Lien copié dans le presse-papier', 'success');
+                },
+
+                // Edit functionality
+                async editOrder(order) {
+                    this.newOrder = {
+                        ...order.client,
+                        request: order.request,
+                        client_notes: order.client_notes,
+                        employee_notes: order.employee_notes,
+                        id: order.id
+                    };
+                    this.showOrderModal = true;
+                },
+
+                searchClientsByPhone() {
+                    // Add safety check for input
+                    const input = (this.newOrder.client_phone || '').replace(/\D/g, '');
+
+                    if (!input) {
+                        this.phoneSuggestions = [];
+                        return;
+                    }
+                    this.phoneSuggestions = this.clients.filter(client => {
+                        // Add safety check for client phone number
+                        const clientPhoneDigits = (client.phone || '').replace(/\D/g, '');
+                        return clientPhoneDigits.includes(input);
+                    });
+                },
+
+                selectClient(client) {
+                    this.newOrder.client_phone = client.phone;
+                    this.newOrder.client_name = client.name;
+                    this.newOrder.client_address = client.address;
+                    this.phoneSuggestions = [];
+                },
+
+                statusClasses(status) {
+                    return {
+                        'bg-yellow-100 text-yellow-800': status === 'pending',
+                        'bg-blue-100 text-blue-800': status === 'accepted',
+                        'bg-green-100 text-green-800': status === 'delivered',
+                        'bg-red-100 text-red-800': status === 'canceled'
+                    };
+                },
+
+                formatDate(dateString) {
+                    const options = { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+                    return new Date(dateString).toLocaleDateString('fr-FR', options);
+                },
+
+                //cancellation modal methods
+                openCancellationModal() {
+                    this.showCancellationModal = true;
+                },
+
+                async submitCancellationReason() {
+                    try {
+                        await axios.post(`${this.apiUrl}/order/cancellation-reason`, {
+                            order_id: this.selectedOrder,
+                            cause: this.cancellationReason
+                        });
+
+                        Swal.fire('Succès!', 'Raison d\'annulation enregistrée', 'success');
+                        this.closeCancellationModal();
+                    } catch (error) {
+                        Swal.fire('Erreur', error.response?.data?.message || 'Échec de l\'enregistrement', 'error');
+                    }
+                },
+
+                closeCancellationModal() {
+                    this.showCancellationModal = false;
+                    this.selectedOrder = null;
+                    this.cancellationReason = '';
+                },
+
+                //sidebar logic
+                handleClickOutside(event) {
+                    const sidebar = document.querySelector('aside');
+                    const button = document.querySelector('button');
+
+                    if (
+                        !sidebar.contains(event.target) &&
+                        !button.contains(event.target) &&
+                        this.isSidebarOpen
+                    ) {
+                        this.isSidebarOpen = false;
+                    }
+                }
+            },
+            watch: {
+                isSidebarOpen(newVal) {
+                    // Add/remove overflow hidden on body when sidebar is open
+                    if (newVal) {
+                        document.body.classList.add('overflow-hidden');
+                    } else {
+                        document.body.classList.remove('overflow-hidden');
+                    }
+                }
+            },
+        });
+
+        app.mount('#app');
+    </script>
+</body>
+
+</html>

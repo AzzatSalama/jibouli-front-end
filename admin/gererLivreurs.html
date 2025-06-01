@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Jibouli</title>
+    <script src="https://unpkg.com/vue@3.5.13/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <!-- <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css"> -->
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- SweetAlert -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* Add custom tooltip styles */
+        [tooltip] {
+            position: relative;
+        }
+
+        [tooltip]::after {
+            content: attr(title);
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 14px;
+            white-space: pre-line;
+            visibility: hidden;
+            opacity: 0;
+            transition: opacity 0.2s;
+            z-index: 10;
+        }
+
+        [tooltip]:hover::after {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100">
+    <div id="app" class="min-h-screen">
+        <!-- Header -->
+        <nav class="bg-white shadow">
+            <div class="px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-start h-16">
+                    <div class="flex items-center">
+                        <!-- Burger Button -->
+                        <button @click="isSidebarOpen = !isSidebarOpen"
+                            class="mr-2 p-2 text-gray-600 hover:bg-gray-100 rounded-lg" aria-label="Open sidebar">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        </button>
+                        <h1 class="text-xl font-bold">Tableau de Bord Administrateur</h1>
+                    </div>
+                </div>
+            </div>
+        </nav>
+        <!-- Sidebar Backdrop -->
+        <div v-show="isSidebarOpen" @click="isSidebarOpen = false"
+            class="fixed inset-0 z-20 bg-black opacity-50 transition-opacity"></div>
+
+        <!-- Sidebar -->
+        <aside class="fixed inset-y-0 left-0 z-30 w-64 bg-white shadow-lg transform transition-all duration-300"
+            :class="isSidebarOpen ? 'translate-x-0' : '-translate-x-full'">
+            <div class="p-4">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Jibouli</h2>
+                <nav class="space-y-1">
+                    <a href="/dashboard.html"
+                        class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition">
+                        📊 Tableau de Bord
+                    </a>
+                    <a href="/gererEmployees.html"
+                        class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition">
+                        👥 Employées
+                    </a>
+                    <a href="/gererLivreurs.html"
+                        class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition">
+                        🛵 Livreurs
+                    </a>
+                    <a href="/gererOrders.html"
+                        class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition">
+                        📦 Commandes
+                    </a>
+                    <a href="/gererPartners.html"
+                        class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition">
+                        🤝 Partenaires
+                    </a>
+                </nav>
+            </div>
+        </aside>
+
+        <main class="p-6">
+            <div class="mx-auto">
+                <!-- Header -->
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold text-gray-800">Gestion des Livreurs</h2>
+                    <button @click="showCreateModal = true"
+                        class=" px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition whitespace-nowrap flex">
+                        + <span class="hidden lg:block">Nouvel Livreur</span>
+                    </button>
+                </div>
+
+                <!-- Livreurs Table -->
+                <div class="bg-white rounded-lg shadow overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nom</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Téléphone
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Commandes
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Solde
+                                </th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <tr v-for="livreur in livreurs" :key="livreur.id">
+                                <td class="px-6 py-4 whitespace-nowrap">{{ livreur.livreur_name }}</td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span>
+                                        {{ livreur.livreur_phone }}
+                                    </span>
+                                    <a :href="'tel:' + livreur.livreur_phone"
+                                        class="ml-2 p-2 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition">
+                                        <i class="fas fa-phone"></i>
+                                    </a>
+                                    <a :href="'https://wa.me/' + livreur.livreur_phone" target="_blank"
+                                        class="ml-2 p-2 bg-green-100 text-green-600 rounded-full hover:bg-green-200 transition">
+                                        <i class="fab fa-whatsapp"></i>
+                                    </a>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <span :class="statusClasses(livreur.status)" class="px-2 py-1 rounded-full text-sm">
+                                        {{ livreur.status }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    <div v-tooltip="getOrderTooltip(livreur)" class="cursor-help">
+                                        {{ livreur.order_stats ? livreur.order_stats.total :0 }}
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap">
+                                    {{livreur.solde}}
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap space-x-2">
+                                    <button @click="showStatsModal(livreur)"
+                                        class="p-2 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition">
+                                        <i class="fas fa-chart-bar"></i>
+                                    </button>
+                                    <button @click="openEditModal(livreur)"
+                                        class="p-2 bg-green-100 text-green-600 rounded-full hover:bg-green-200 transition">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button @click="deleteLivreur(livreur.id)"
+                                        class="p-2 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <!-- Stats Modal -->
+        <div v-if="showStats" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg p-6 w-full max-w-2xl">
+                <h3 class="text-xl font-bold mb-4">Statistiques de {{ activeLivreur.livreur_name }}</h3>
+
+                <!-- Date Filters -->
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                    <input v-model="dateFilters.from" @change="fetchStats()" type="date" class="border rounded p-2">
+                    <input v-model="dateFilters.to" @change="fetchStats()" type="date" class="border rounded p-2">
+                </div>
+
+                <!-- Stats Chart -->
+                <div class="mb-4">
+                    <canvas id="statsChart"></canvas>
+                </div>
+
+                <!-- Stats Summary -->
+                <div class="grid grid-cols-3 gap-4 text-center">
+                    <div class="p-4 bg-blue-50 rounded-lg">
+                        <p class="text-2xl font-bold">{{ statsData.total }}</p>
+                        <p class="text-sm">Total</p>
+                    </div>
+                    <div class="p-4 bg-green-50 rounded-lg">
+                        <p class="text-2xl font-bold">{{ statsData.delivered }}</p>
+                        <p class="text-sm">Livrées</p>
+                    </div>
+                    <div class="p-4 bg-red-50 rounded-lg">
+                        <p class="text-2xl font-bold">{{ statsData.canceled }}</p>
+                        <p class="text-sm">Annulées</p>
+                    </div>
+                </div>
+
+                <button @click="showStats = false" class="mt-4 px-4 py-2 bg-gray-200 rounded-lg">
+                    Fermer
+                </button>
+            </div>
+        </div>
+
+        <!-- Edit/Create Modal -->
+        <div v-if="showEditModal || showCreateModal"
+            class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg p-6 w-full max-w-md">
+                <h3 class="text-xl font-bold mb-4">
+                    {{ showCreateModal ? 'Nouvel Employé' : 'Modifier Employé' }}
+                </h3>
+
+                <form @submit.prevent="saveLivreur">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Nom</label>
+                            <input placeholder="Nom du livreur" type="text" v-model="editForm.livreur_name" required
+                                class="mt-1 w-full border border-gray-200 rounded px-2 py-1">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Téléphone</label>
+                            <input placeholder="Numéro de tel de livreur" type="text" v-model="editForm.livreur_phone"
+                                required class="mt-1 w-full border border-gray-200 rounded px-2 py-1">
+                        </div>
+                        <!-- <div>
+                            <label class="block text-sm font-medium text-gray-700">Statut</label>
+                            <select v-model="editForm.status"
+                                class="mt-1 w-full border border-gray-200 rounded px-2 py-1">
+                                <option value="available">Actif</option>
+                                <option value="not available">Inactif</option>
+                            </select>
+                        </div> -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Solde</label>
+                            <input placeholder="Numéro de tel d'employé" type="number" v-model="editForm.solde" required
+                                class="mt-1 w-full border border-gray-200 rounded px-2 py-1">
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Email</label>
+                            <input placeholder="Numéro de tel d'employé" type="email" v-model="editForm.email" required
+                                class="mt-1 w-full border border-gray-200 rounded px-2 py-1">
+                        </div>
+                        <div v-if="showCreateModal">
+                            <label class="block text-sm font-medium text-gray-700">Mot de pass</label>
+                            <input placeholder="Numéro de tel d'employé" type="password" v-model="editForm.password"
+                                required class="mt-1 w-full border border-gray-200 rounded px-2 py-1">
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex justify-end gap-4">
+                        <button type="button" @click="closeModals" class="px-4 py-2 bg-gray-200 rounded-lg">
+                            Annuler
+                        </button>
+                        <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg">
+                            Sauvegarder
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    </div>
+
+    <!-- data table -->
+
+    <script src="includes/jquery-3.7.0.js"></script>
+    <script src="includes/jquery.dataTables.min.js"></script>
+    <script src="includes/datatables.tailwind.js"></script>
+    <script>
+        // const { createApp } = Vue;
+
+        const app = Vue.createApp({
+            data() {
+                return {
+                    apiUrl: 'http://jibouli.test/api',
+
+                    livreurs: [],
+                    showStats: false,
+                    showEditModal: false,
+                    showCreateModal: false,
+                    activeLivreur: null,
+                    dateFilters: { from: null, to: null },
+                    statsData: { total: 0, delivered: 0, canceled: 0 },
+                    editForm: { id: null, livreur_name: '', livreur_phone: '', status: 'available', solde: 0, email: '', password: '' },
+                    chart: null,
+
+
+                    isSidebarOpen: false
+                }
+            },
+            mounted() {
+                // Get token from localStorage
+                this.token = localStorage.getItem('adminJibouli-token');
+
+                if (!this.token) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'حدث خطأ!',
+                        text: "أنت غير مسجل الدخول.",
+                        confirmButtonText: 'حسنا'
+                    }).then(() => {
+                        window.location.href = "index.html"
+                    });
+                    return;
+                }
+
+                // Set default headers
+                axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`;
+                axios.defaults.headers.common['Accept'] = 'application/json';
+                axios.defaults.headers.common['Content-Type'] = 'application/json';
+
+                // Set up axios interceptors
+                axios.interceptors.request.use(config => {
+                    if (this.token) {
+                        config.headers.Authorization = `Bearer ${this.token}`;
+                    }
+                    return config;
+                });
+
+
+                // Load initial data from API
+                this.fetchLivreurs();
+                // this.fetchStats();
+
+                // Close sidebar when clicking outside
+                document.addEventListener('click', this.handleClickOutside);
+            },
+            methods: {
+                async fetchLivreurs() {
+                    try {
+                        const response = await axios.get(this.apiUrl + `/delivery-persons`);
+                        this.livreurs = response.data;
+                    } catch (error) {
+                        if (error.response && error.response.status === 401) {
+                            // Handle 401 error specifically
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Erreur!',
+                                text: "Vous n'êtes pas connecté.",
+                                confirmButtonText: 'OK'
+                            }).then(() => {
+                                window.location.href = "index.html";
+                            });
+                        } else {
+                            console.error('Erreur lors du chargement des données des livreurs:', error);
+                        }
+                    }
+                },
+
+                async fetchStats() {
+                    try {
+                        const params = {
+                            from: this.dateFilters.from,
+                            to: this.dateFilters.to
+                        };
+
+                        const response = await axios.get(this.apiUrl + `/employee/${this.activeEmployee.id}/stats`, { params });
+
+                        this.statsData = response.data.stats;
+                        this.updateChart(response.data.timeline);
+                    } catch (error) {
+                        console.error('Error fetching stats:', error);
+                    }
+                },
+
+                updateChart(timelineData) {
+                    const labels = timelineData.map(item =>
+                        this.formatFrenchDate(item.day)
+                    );
+                    const data = timelineData.map(item => item.count);
+
+                    if (this.chart) this.chart.destroy();
+
+                    const ctx = document.getElementById('statsChart');
+                    this.chart = new window.Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Commandes quotidiennes',
+                                data: data,
+                                borderColor: '#3b82f6',
+                                tension: 0.1
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: {
+                                    title: {
+                                        display: true,
+                                        text: 'Date'
+                                    },
+                                    ticks: {
+                                        autoSkip: true,
+                                        maxTicksLimit: 10
+                                    }
+                                },
+                                y: {
+                                    title: {
+                                        display: true,
+                                        text: 'Nombre de commandes'
+                                    },
+                                    beginAtZero: true
+                                }
+                            }
+                        }
+                    });
+                },
+
+                formatFrenchDate(dateString) {
+                    const date = new Date(dateString);
+                    return date.toLocaleDateString('fr-FR', {
+                        day: '2-digit',
+                        month: 'short'
+                    });
+                },
+
+                statusClasses(status) {
+                    return {
+                        'bg-green-100 text-green-800': status === 'active',
+                        'bg-red-100 text-red-800': status === 'inactive'
+                    };
+                },
+
+                getOrderTooltip(livreur) {
+                    return `Livrées: ${livreur.order_stats.delivered ?? 0} | Annulées: ${livreur.order_stats.canceled ?? 0} | En attente: ${livreur.order_stats.pending ?? 0}`;
+                },
+
+                async deleteLivreur(id) {
+                    Swal.fire({
+                        title: 'Êtes-vous sûr?',
+                        text: "Vous ne pourrez pas revenir en arrière!",
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#3085d6',
+                        cancelButtonColor: '#d33',
+                        confirmButtonText: 'Oui',
+                        cancelButtonText: 'Annuler'
+                    }).then(async (result) => {
+                        if (result.isConfirmed) {
+                            try {
+                                await axios.delete(`${this.apiUrl}/delivery/${id}`);
+                                Swal.fire(
+                                    'Supprimé!',
+                                    'Le livreur a été supprimé avec succès.',
+                                    'success'
+                                );
+                                this.fetchEmployees();
+                            } catch (error) {
+                                Swal.fire(
+                                    'Erreur!',
+                                    'Une erreur est survenue lors de la suppression.',
+                                    'error'
+                                );
+                                console.error('Error deleting delivery driver:', error);
+                            }
+                        }
+                    });
+                },
+
+                showStatsModal(livreur) {
+                    this.activeLivreur = livreur;
+                    this.showStats = true;
+                    // this.$nextTick(() => {
+                    this.initChart();
+                    this.fetchStats()
+                    // });
+                },
+
+                openEditModal(livreur) {
+                    this.editForm = { ...livreur };
+                    this.showEditModal = true;
+                },
+
+                initChart() {
+                    if (this.chart) this.chart.destroy();
+
+                    const ctx = document.getElementById('statsChart');
+                    this.chart = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May'],
+                            datasets: [{
+                                label: 'Commandes',
+                                data: [12, 19, 3, 5, 2],
+                                borderColor: '#3b82f6',
+                                tension: 0.1
+                            }]
+                        }
+                    });
+                },
+
+                async saveLivreur() {
+                    try {
+                        if (this.showCreateModal) {
+                            // Storing mode
+                            await axios.post(`${this.apiUrl}/delivery/store`, this.editForm);
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Succès',
+                                text: 'Livreur ajouté avec succès!',
+                                confirmButtonText: 'OK'
+                            });
+                        } else {
+                            // Editing mode
+                            await axios.post(`${this.apiUrl}/delivery/${this.editForm.id}/edit`, this.editForm);
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Succès',
+                                text: 'Livreur modifié avec succès!',
+                                confirmButtonText: 'OK'
+                            });
+                        }
+                        this.fetchLivreurs();
+                        this.closeModals();
+                    } catch (error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Erreur',
+                            text: 'Une erreur est survenue. Veuillez réessayer.',
+                            confirmButtonText: 'OK'
+                        });
+                        console.error('Error saving delivery driver:', error);
+                    }
+                },
+
+                closeModals() {
+                    this.showStats = false;
+                    this.showEditModal = false;
+                    this.showCreateModal = false;
+                    this.editForm = { id: null, livreur_name: '', livreur_phone: '', status: 'active' };
+                },
+
+
+                //sidebar logic
+                handleClickOutside(event) {
+                    const sidebar = document.querySelector('aside');
+                    const button = document.querySelector('button');
+
+                    if (
+                        !sidebar.contains(event.target) &&
+                        !button.contains(event.target) &&
+                        this.isSidebarOpen
+                    ) {
+                        this.isSidebarOpen = false;
+                    }
+                }
+            },
+            directives: {
+                tooltip: {
+                    mounted(el, binding) {
+                        el.setAttribute('title', binding.value.replace(/\n/g, '\\A'));
+                        el.style.whiteSpace = 'pre-line';
+                    }
+                }
+            },
+            watch: {
+                isSidebarOpen(newVal) {
+                    // Add/remove overflow hidden on body when sidebar is open
+                    if (newVal) {
+                        document.body.classList.add('overflow-hidden');
+                    } else {
+                        document.body.classList.remove('overflow-hidden');
+                    }
+                }
+            },
+        })
+        app.mount('#app');
+    </script>
+</body>
+
+</html>

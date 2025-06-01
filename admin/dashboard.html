@@ -1,0 +1,748 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel - Jibouli</title>
+    <script src="https://unpkg.com/vue@3.5.13/dist/vue.global.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <!-- <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css"> -->
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- SweetAlert -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+
+<body class="bg-gray-100">
+    <div id="app" class="min-h-screen">
+        <!-- Header -->
+        <nav class="bg-white shadow">
+            <div class="px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex items-center">
+                        <!-- Burger Button -->
+                        <button @click="isSidebarOpen = !isSidebarOpen"
+                            class="mr-2 p-2 text-gray-600 hover:bg-gray-100 rounded-lg" aria-label="Open sidebar">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                        </button>
+                        <h1 class="text-xl font-bold">Tableau de Bord Administrateur</h1>
+                    </div>
+                </div>
+            </div>
+        </nav>
+        <!-- Sidebar Backdrop -->
+        <div v-show="isSidebarOpen" @click="isSidebarOpen = false"
+            class="fixed inset-0 z-20 bg-black opacity-50 transition-opacity"></div>
+
+        <!-- Sidebar -->
+        <aside class="fixed inset-y-0 left-0 z-30 w-64 bg-white shadow-lg transform transition-all duration-300"
+            :class="isSidebarOpen ? 'translate-x-0' : '-translate-x-full'">
+            <div class="p-4">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Jibouli</h2>
+                <nav class="space-y-1">
+                    <a href="/dashboard.html"
+                        class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition">
+                        📊 Tableau de Bord
+                    </a>
+                    <a href="/gererEmployees.html"
+                        class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition">
+                        👥 Employées
+                    </a>
+                    <a href="/gererLivreurs.html"
+                        class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition">
+                        🛵 Livreurs
+                    </a>
+                    <a href="/gererOrders.html"
+                        class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition">
+                        📦 Commandes
+                    </a>
+                    <a href="/gererPartners.html"
+                        class="flex items-center px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition">
+                        🤝 Partenaires
+                    </a>
+                </nav>
+            </div>
+        </aside>
+
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            <!-- Stats Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+                <!-- Orders Card -->
+                <div class="bg-white rounded-lg shadow p-6 border-t-4 border-blue-500">
+                    <!-- Header with Title & Date Picker -->
+                    <div class="flex justify-between items-center mb-5">
+                        <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                            <i class="fas fa-box text-blue-500"></i> Commandes
+                        </h3>
+                        <input type="date" v-model="selectedDate" @change="loadOrderNumbers()"
+                            class="border rounded px-3 py-1 text-gray-700 focus:ring focus:ring-blue-200">
+                    </div>
+
+                    <!-- Order Statistics -->
+                    <div class="grid grid-cols-2 gap-6">
+                        <!-- Total Orders -->
+                        <div class="text-center bg-blue-100 text-blue-800 p-4 rounded-lg shadow-sm">
+                            <p class="text-3xl font-bold">{{ stats.orders.total }}</p>
+                            <p class="text-sm font-medium">Total</p>
+                        </div>
+
+                        <!-- Order Status List -->
+                        <div class="space-y-3 text-gray-700">
+                            <div class="flex justify-between items-center">
+                                <span class="flex items-center gap-2">
+                                    <i class="fas fa-check-circle text-green-500"></i> Acceptées:
+                                </span>
+                                <span class="font-semibold text-green-600">{{ stats.orders.accepted }}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="flex items-center gap-2">
+                                    <i class="fas fa-truck text-blue-500"></i> Livrées:
+                                </span>
+                                <span class="font-semibold text-blue-600">{{ stats.orders.delivered }}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="flex items-center gap-2">
+                                    <i class="fas fa-hourglass-half text-yellow-500"></i> En attente:
+                                </span>
+                                <span class="font-semibold text-yellow-600">{{ stats.orders.pending }}</span>
+                            </div>
+                            <div class="flex justify-between items-center">
+                                <span class="flex items-center gap-2">
+                                    <i class="fas fa-times-circle text-red-500"></i> Annulées:
+                                </span>
+                                <span class="font-semibold text-red-600">{{ stats.orders.canceled }}</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- Drivers Card -->
+                <div class="bg-white rounded-lg shadow p-6 border-t-4 border-green-500">
+                    <!-- Header -->
+                    <div class="flex items-center gap-2 mb-5">
+                        <i class="fas fa-motorcycle text-green-500 text-xl"></i>
+                        <h3 class="text-lg font-semibold text-gray-800">Livreurs</h3>
+                    </div>
+
+                    <!-- Driver Stats Grid -->
+                    <div class="grid grid-cols-2 gap-6">
+                        <!-- Total Drivers -->
+                        <div class="text-center bg-gray-100 text-gray-800 p-4 rounded-lg shadow-sm">
+                            <p class="text-3xl font-bold">{{ stats.drivers.total }}</p>
+                            <p class="text-sm font-medium">Total</p>
+                        </div>
+
+                        <!-- Active Drivers -->
+                        <div class="text-center bg-green-100 text-green-800 p-4 rounded-lg shadow-sm">
+                            <p class="text-3xl font-bold">{{ stats.drivers.active }}</p>
+                            <p class="text-sm font-medium">Actifs</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Clients Card -->
+                <div class="bg-white rounded-lg shadow p-6 border-t-4 border-orange-500">
+                    <!-- Header -->
+                    <div class="flex items-center gap-2 mb-5">
+                        <i class="fas fa-users text-orange-500 text-xl"></i>
+                        <h3 class="text-lg font-semibold text-gray-800">Clients</h3>
+                    </div>
+
+                    <!-- Client Stats Grid -->
+                    <div class="grid grid-cols-3 gap-4">
+                        <!-- Total Clients -->
+                        <div class="text-center bg-gray-100 text-gray-800 p-4 rounded-lg shadow-sm">
+                            <p class="text-3xl font-bold">{{ stats.clients.total }}</p>
+                            <p class="text-sm font-medium">Total</p>
+                        </div>
+
+                        <!-- Avg Orders per Client -->
+                        <div class="text-center bg-orange-100 text-orange-800 p-4 rounded-lg shadow-sm">
+                            <p class="text-3xl font-bold">{{ stats.clients.avg_orders_per_client.toFixed(1) }}</p>
+                            <p class="text-sm font-medium">Moy. Commandes / Client</p>
+                        </div>
+
+                        <!-- Avg Orders per Month per Client -->
+                        <div class="text-center bg-green-100 text-green-800 p-4 rounded-lg shadow-sm">
+                            <p class="text-3xl font-bold">{{ stats.clients.avg_orders_per_month_per_client.toFixed(1) }}
+                            <p class="text-sm font-medium">Moy. Commandes / Mois / Client</p>
+                        </div>
+                    </div>
+                </div>
+
+
+            </div>
+
+            <!-- Orders Table -->
+            <div class="bg-white rounded-lg shadow mb-8 overflow-hidden">
+                <!-- Header -->
+                <div class="p-4 border-b flex justify-between items-center bg-blue-50">
+                    <h3 class="text-lg font-semibold text-blue-700 flex items-center">
+                        <i class="fas fa-box mr-2"></i> Liste des Commandes
+                    </h3>
+                    <button @click="showOrderModal = true"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center">
+                        <i class="fas fa-plus-circle mr-2"></i> Nouvelle Commande
+                    </button>
+                </div>
+
+                <!-- Table Container -->
+                <div class="overflow-x-auto px-2 py-2.5">
+                    <table id="ordersTable" class="w-full min-w-[600px] border-collapse">
+                        <thead>
+                            <tr class="bg-gray-100 text-gray-700">
+                                <th class="px-4 py-2 text-left">N° Commande</th>
+                                <th class="px-4 py-2 text-left">Client</th>
+                                <th class="px-4 py-2 text-left">Téléphone</th>
+                                <!-- <th class="px-4 py-2 text-left">Adresse</th> -->
+                                <!-- <th class="px-4 py-2 text-left">Demande</th> -->
+                                <th class="px-4 py-2 text-left">Utilisateur</th>
+                                <th class="px-4 py-2 text-left">Statut</th>
+                                <th class="px-4 py-2 text-left">Livreur</th>
+                                <th class="px-4 py-2 text-left">Créé le</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="order in orders" :key="order.id" class="hover:bg-gray-50">
+                                <td class="px-4 py-3 border-b">{{
+                                    order.id }}
+                                </td>
+                                <td class="px-4 py-3 border-b">{{ order.client.name }}</td>
+                                <td class="px-4 py-3 border-b">{{ order.client.phone }}</td>
+                                <!-- <td class="px-4 py-3 border-b">{{ order.client.address }}</td> -->
+                                <!-- <td class="px-4 py-3 border-b">{{ order.request }}</td> -->
+                                <td class="px-4 py-3 border-b">{{ order.user }}</td>
+                                <td class="px-4 py-3 border-b">
+                                    <span :class="statusBadge(order.status)"
+                                        class="px-2 py-1 rounded text-white text-sm">
+                                        {{ order.status }}
+                                    </span>
+                                </td>
+                                <td class="px-4 py-3 border-b">{{ order.driver || '-' }}</td>
+                                <td class="px-4 py-3 border-b">{{ formatDate(order.created_at) }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Clients Table -->
+            <div class="bg-white rounded-lg shadow overflow-hidden">
+                <!-- Header -->
+                <div class="p-4 border-b flex justify-between items-center bg-green-50">
+                    <h3 class="text-lg font-semibold text-green-700 flex items-center">
+                        <i class="fas fa-user-friends mr-2"></i> Liste des Clients
+                    </h3>
+                    <button @click="showClientModal = true"
+                        class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center">
+                        <i class="fas fa-plus-circle mr-2"></i> Nouveau Client
+                    </button>
+                </div>
+
+                <!-- Table Container -->
+                <div class="overflow-x-auto px-2 py-2.5">
+                    <table id="clientsTable" class="w-full min-w-[500px] border-collapse">
+                        <thead>
+                            <tr class="bg-gray-100 text-gray-700">
+                                <th class="px-4 py-2 text-left">Nom</th>
+                                <th class="px-4 py-2 text-left">Téléphone</th>
+                                <th class="px-4 py-2 text-left">Adresse</th>
+                                <th class="px-4 py-2 text-left">Commandes</th>
+                                <th class="px-4 py-2 text-left">Dernière Commande</th>
+                                <th class="px-4 py-2 text-left">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="client in clients" :key="client.id" class="hover:bg-gray-50">
+                                <td class="px-4 py-3 border-b">{{ client.name }}</td>
+                                <td class="px-4 py-3 border-b">{{ client.phone }}</td>
+                                <td class="px-4 py-3 border-b">{{ client.address }}</td>
+                                <td class="px-4 py-3 border-b cursor-help"
+                                    v-tooltip="`✅ Livrées: ${client.orders.delivered}<br>❌ Annulées: ${client.orders.canceled}<br>⏳ En attente: ${client.orders.pending}`">
+                                    {{ client.orders.total }}
+                                </td>
+                                <td class="px-4 py-3 border-b">{{ formatDate(client.last_order) }}</td>
+                                <td class="px-4 py-3 border-b">
+                                    <button class="text-blue-600 hover:text-blue-800">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </main>
+
+        <!-- Modals -->
+        <!-- Order Modal -->
+        <div v-if="showOrderModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+            <div class="bg-white rounded-lg p-6 w-full max-w-2xl">
+                <h3 class="text-xl font-bold mb-4">Nouvelle Commande</h3>
+                <!-- Add form fields here -->
+                <form @submit.prevent="createOrder" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-1">
+                        <!-- Nom Client -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Nom Client</label>
+                            <input v-model="newOrder.client_name" type="text" required
+                                class="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 px-4 py-2">
+                        </div>
+                        <!-- Téléphone Client with searchable dropdown -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Téléphone Client</label>
+                            <div class="relative">
+                                <input v-model="newOrder.client_phone" type="tel" required placeholder="+212xxxxxxxxx"
+                                    @input="searchClientsByPhone"
+                                    class="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 px-4 py-2">
+                                <div v-if="phoneSuggestions.length > 0"
+                                    class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg mt-1 max-h-48 overflow-y-auto shadow-lg">
+                                    <ul>
+                                        <li v-for="client in phoneSuggestions" :key="client.id"
+                                            @click="selectClient(client)"
+                                            class="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm">
+                                            {{ client.phone }}
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Demande Client -->
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700">Demande Client</label>
+                            <textarea v-model="newOrder.request" required rows="3"
+                                class="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 px-4 py-2"></textarea>
+                        </div>
+                        <!-- Adresse Client -->
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700">Adresse Client</label>
+                            <textarea v-model="newOrder.client_address" required rows="3"
+                                class="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 px-4 py-2"></textarea>
+                        </div>
+                        <!-- Note Client -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Note Client</label>
+                            <textarea v-model="newOrder.client_notes" rows="3"
+                                class="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 px-4 py-2"></textarea>
+                        </div>
+                        <!-- Votre Remarque -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Votre Remarque</label>
+                            <textarea v-model="newOrder.employee_notes" rows="3"
+                                class="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 px-4 py-2"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="flex flex-col md:flex-row justify-end gap-4 mt-6">
+                        <button type="button" @click="cancelOrderForm"
+                            class="px-2.5 md:px-5 py-1 md:py-2 text-gray-700 bg-gray-100 rounded-lg shadow-sm hover:bg-gray-200 transition">
+                            Annuler
+                        </button>
+                        <button type="submit"
+                            class="px-2.5 md:px-5 py-1 md:py-2 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition whitespace-nowrap">
+                            Créer Commande
+                        </button>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+
+        <!-- Client Modal -->
+        <div v-if="showClientModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+            <div class="bg-white rounded-lg p-6 w-full max-w-md">
+                <h3 class="text-xl font-bold mb-4">Nouveau Client</h3>
+                <form @submit.prevent="createClient" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-1">
+                        <!-- Nom Client -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Nom Client</label>
+                            <input v-model="newClient.client_name" type="text" required
+                                class="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 px-4 py-2">
+                        </div>
+
+                        <!-- Tel Client -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Téléphone Client</label>
+                            <input v-model="newClient.client_phone" type="text" required
+                                class="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 px-4 py-2">
+                        </div>
+
+                        <!-- Adresse Client -->
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700">Adresse Client</label>
+                            <textarea v-model="newClient.client_address" required rows="3"
+                                class="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 px-4 py-2"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="flex flex-col md:flex-row justify-end gap-4 mt-6">
+                        <button type="button" @click="cancelClientForm"
+                            class="px-2.5 md:px-5 py-1 md:py-2 text-gray-700 bg-gray-100 rounded-lg shadow-sm hover:bg-gray-200 transition">
+                            Annuler
+                        </button>
+                        <button type="submit"
+                            class="px-2.5 md:px-5 py-1 md:py-2 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition whitespace-nowrap">
+                            Créer Client
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- data table -->
+    <script src="includes/jquery-3.7.0.js"></script>
+    <script src="includes/jquery.dataTables.min.js"></script>
+    <script src="includes/datatables.tailwind.js"></script>
+    <script>
+        // const { createApp } = Vue;
+
+        const app = Vue.createApp({
+            data() {
+                return {
+                    apiUrl: 'http://jibouli.test/api',
+                    newOrder: {
+                        client_phone: '',
+                        client_name: '',
+                        client_address: '',
+                        request: '',
+                        client_notes: '',
+                        employee_notes: ''
+                    },
+                    newClient: {
+                        client_phone: '',
+                        client_name: '',
+                        client_address: ''
+                    },
+                    phoneSuggestions: [],
+                    selectedDate: new Date().toISOString().split('T')[0],
+                    stats: {
+                        orders: {
+                            total: 45,
+                            accepted: 30,
+                            delivered: 25,
+                            pending: 10,
+                            canceled: 5
+                        },
+                        drivers: {
+                            total: 15,
+                            active: 10
+                        },
+                        clients: {
+                            total: 0,
+                            avg_orders_per_client: 0,
+                            avg_orders_per_month_per_client: 0
+                        }
+                    },
+                    orders: [], // Would be populated from API
+                    clients: [], // Would be populated from API
+                    showOrderModal: false,
+                    showClientModal: false,
+
+                    isSidebarOpen: false
+                }
+            },
+            mounted() {
+                // Get token from localStorage
+                this.token = localStorage.getItem('adminJibouli-token');
+
+                if (!this.token) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'حدث خطأ!',
+                        text: "أنت غير مسجل الدخول.",
+                        confirmButtonText: 'حسنا'
+                    }).then(() => {
+                        window.location.href = "index.html"
+                    });
+                    return;
+                }
+
+                // Set default headers
+                axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`;
+                axios.defaults.headers.common['Accept'] = 'application/json';
+                axios.defaults.headers.common['Content-Type'] = 'application/json';
+
+                // Set up axios interceptors
+                axios.interceptors.request.use(config => {
+                    if (this.token) {
+                        config.headers.Authorization = `Bearer ${this.token}`;
+                    }
+                    return config;
+                });
+
+
+                // Load initial data from API
+                this.loadDashboardData();
+                this.loadOrderNumbers();
+
+                // Close sidebar when clicking outside
+                document.addEventListener('click', this.handleClickOutside);
+            },
+            methods: {
+                async loadDashboardData() {
+                    try {
+                        const [driversRes, ordersRes, clientsRes, clientStatsRes] = await Promise.all([
+                            axios.get(this.apiUrl + '/dashboard/drivers'),
+                            axios.get(this.apiUrl + '/dashboard/orders'),
+                            axios.get(this.apiUrl + '/dashboard/clients'),
+                            axios.get(this.apiUrl + '/dashboard/client-stats'),
+                        ]);
+
+                        this.stats.drivers = driversRes.data;
+                        this.stats.clients = clientStatsRes.data;
+                        this.orders = ordersRes.data;
+
+                        this.orders = ordersRes.data;
+
+                        this.clients = clientsRes.data;
+
+                        this.initDataTables();
+                    } catch (error) {
+                        if (error.response && error.response.status === 401) {
+                            // Handle 401 error specifically
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Erreur!',
+                                text: "Vous n'êtes pas connecté.",
+                                confirmButtonText: 'OK'
+                            }).then(() => {
+                                window.location.href = "index.html";
+                            });
+                        } else {
+                            this.showError(error.response?.data?.message || 'Erreur de chargement des données');
+                            console.error('Error loading data:', error);
+                        }
+                    }
+                },
+                async loadOrderNumbers() {
+                    try {
+                        const statsRes = await axios.get(this.apiUrl + '/dashboard/orders-stats', { params: { date: this.selectedDate } });
+                        this.stats.orders = statsRes.data.orders;
+                    } catch (error) {
+                        if (error.response && error.response.status === 401) {
+                            // Handle 401 error specifically
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Erreur!',
+                                text: "Vous n'êtes pas connecté.",
+                                confirmButtonText: 'OK'
+                            }).then(() => {
+                                window.location.href = "index.html";
+                            });
+                        } else {
+                            this.showError(error.response?.data?.message || 'Erreur de chargement des données');
+                            console.error('Error loading data:', error);
+                        }
+                    }
+                },
+                initDataTables() {
+                    // Destroy existing DataTable if it exists
+                    if ($.fn.DataTable.isDataTable('#ordersTable')) {
+                        $('#ordersTable').DataTable().destroy();
+                    }
+
+                    this.$nextTick(() => {
+                        // Initialize DataTables after Vue has updated the DOM
+                        $('#ordersTable').DataTable({
+                            responsive: true,
+                            language: {
+                                // url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/fr-FR.json'
+                            },
+                            destroy: true // Add this option to allow reinitialization
+                        });
+                    });
+
+                    // Destroy existing DataTable if it exists
+                    if ($.fn.DataTable.isDataTable('#clientsTable')) {
+                        $('#clientsTable').DataTable().destroy();
+                    }
+
+                    this.$nextTick(() => {
+                        // Initialize DataTables after Vue has updated the DOM
+                        $('#clientsTable').DataTable({
+                            responsive: true,
+                            language: {
+                                // url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/fr-FR.json'
+                            },
+                            destroy: true // Add this option to allow reinitialization
+                        });
+                    });
+                },
+                statusBadge(status) {
+                    const classes = {
+                        pending: 'bg-yellow-500 capitalize text-white',
+                        accepted: 'bg-blue-500 capitalize text-white',
+                        delivered: 'bg-green-500 capitalize text-white',
+                        canceled: 'bg-red-500 capitalize text-white'
+                    };
+                    return `px-2 py-1 rounded-full text-sm ${classes[status]}`;
+                },
+                formatDate(date) {
+                    return new Date(date).toLocaleString('fr-FR');
+                },
+
+                async createOrder() {
+                    try {
+                        const response = await axios.post(`${this.apiUrl}/order`, {
+                            ...this.newOrder,
+                        });
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Succès',
+                            text: 'Commande créée avec succès',
+                            timer: 1000,
+                            showConfirmButton: false
+                        });
+                        this.showOrderForm = false;
+                        this.cancelOrderForm();
+                        this.loadDashboardData();
+                    } catch (error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Erreur',
+                            text: error.response?.data?.message || 'Échec de la création de commande',
+                            confirmButtonText: 'OK'
+                        });
+                        console.error(error);
+                    }
+                },
+                cancelOrderForm() {
+                    this.showOrderModal = false;
+                    this.newOrder = {
+                        client_phone: '',
+                        client_name: '',
+                        client_address: '',
+                        request: '',
+                        client_notes: '',
+                        employee_notes: ''
+                    }
+                },
+                async createClient() {
+                    try {
+                        const response = await axios.post(`${this.apiUrl}/client`, {
+                            ...this.newClient,
+                        });
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Succès',
+                            text: 'Client créée avec succès',
+                            timer: 1000,
+                            showConfirmButton: false
+                        });
+                        this.showOrderForm = false;
+                        this.cancelClientForm();
+
+                        if (this.isActive) {
+                            await this.loadDashboardData();
+                        }
+                    } catch (error) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Erreur',
+                            text: error.response?.data?.message || 'Échec de la création de commande',
+                            confirmButtonText: 'OK'
+                        });
+                        console.error(error);
+                    }
+                },
+                cancelClientForm() {
+                    this.showClientModal = false
+                    this.newClient = {
+                        client_phone: '',
+                        client_name: '',
+                        client_address: ''
+                    }
+                },
+                searchClientsByPhone() {
+                    // Add safety check for input
+                    const input = (this.newOrder.client_phone || '').replace(/\D/g, '');
+
+                    if (!input) {
+                        this.phoneSuggestions = [];
+                        return;
+                    }
+                    this.phoneSuggestions = this.clients.filter(client => {
+                        // Add safety check for client phone number
+                        const clientPhoneDigits = (client.phone || '').replace(/\D/g, '');
+                        return clientPhoneDigits.includes(input);
+                    });
+                },
+
+                selectClient(client) {
+                    this.newOrder.client_phone = client.phone;
+                    this.newOrder.client_name = client.name;
+                    this.newOrder.client_address = client.address;
+                    this.phoneSuggestions = [];
+                },
+
+
+
+                //sidebar logic
+                handleClickOutside(event) {
+                    const sidebar = document.querySelector('aside');
+                    const button = document.querySelector('button');
+
+                    if (
+                        !sidebar.contains(event.target) &&
+                        !button.contains(event.target) &&
+                        this.isSidebarOpen
+                    ) {
+                        this.isSidebarOpen = false;
+                    }
+                }
+            },
+            watch: {
+                isSidebarOpen(newVal) {
+                    // Add/remove overflow hidden on body when sidebar is open
+                    if (newVal) {
+                        document.body.classList.add('overflow-hidden');
+                    } else {
+                        document.body.classList.remove('overflow-hidden');
+                    }
+                }
+            },
+        })
+        app.directive("tooltip", {
+            mounted(el, binding) {
+                const tooltip = document.createElement("div");
+                tooltip.className = "absolute bg-gray-800 text-white text-xs rounded p-2 shadow-lg transition-opacity opacity-0 pointer-events-none";
+                tooltip.innerHTML = binding.value;
+                tooltip.style.position = "absolute";
+                tooltip.style.whiteSpace = "nowrap";
+                tooltip.style.zIndex = "99";
+
+                el.style.position = "relative";
+                el.appendChild(tooltip);
+
+                el.addEventListener("mouseenter", () => {
+                    tooltip.style.opacity = "1";
+                    tooltip.style.bottom = "100%";
+                    tooltip.style.left = "50%";
+                    tooltip.style.transform = "translateX(-50%) translateY(-4px)";
+                });
+
+                el.addEventListener("mouseleave", () => {
+                    tooltip.style.opacity = "0";
+                });
+            }
+        });
+        app.mount('#app');
+    </script>
+</body>
+
+</html>

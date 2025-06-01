@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Connexion</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> <!-- SweetAlert -->
+</head>
+
+<body class="flex items-center justify-center min-h-screen bg-gray-100">
+
+    <div class="w-4/5 md:w-full md:max-w-md max-w-4/5 p-8 bg-white shadow-lg rounded-lg">
+        <h2 class="text-2xl font-bold text-center text-gray-700">Bienvenue</h2>
+        <p class="text-center text-gray-500">Connectez-vous à votre compte</p>
+
+        <form id="loginForm" class="mt-6">
+            <div>
+                <label class="block text-gray-600">Adresse e-mail</label>
+                <input type="email" id="email"
+                    class="w-full px-4 py-2 mt-2 border rounded-lg focus:ring focus:ring-blue-200"
+                    placeholder="Entrez votre e-mail">
+            </div>
+
+            <div class="mt-4 relative">
+                <label class="block text-gray-600">Mot de passe</label>
+                <input type="password" id="password"
+                    class="w-full px-4 py-2 mt-2 border rounded-lg focus:ring focus:ring-blue-200 pr-10"
+                    placeholder="Entrez votre mot de passe">
+                <span id="togglePassword" class="absolute right-3 top-11 cursor-pointer text-gray-500">
+                    👁️
+                </span>
+            </div>
+
+            <button type="submit" id="loginBtn"
+                class="w-full px-4 py-2 mt-6 text-white bg-blue-600 rounded-lg hover:bg-blue-700">
+                Se connecter
+            </button>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById("togglePassword").addEventListener("click", function () {
+            const passwordInput = document.getElementById("password");
+            passwordInput.type = passwordInput.type === "password" ? "text" : "password";
+        });
+
+        document.getElementById("loginForm").addEventListener("submit", async function (event) {
+            event.preventDefault(); // Empêcher la soumission du formulaire
+
+            const email = document.getElementById("email").value.trim();
+            const password = document.getElementById("password").value.trim();
+            const loginBtn = document.getElementById("loginBtn");
+
+            if (!email || !password) {
+                return Swal.fire("Erreur", "Veuillez remplir tous les champs", "error");
+            }
+
+            loginBtn.innerHTML = "Connexion en cours...";
+            loginBtn.disabled = true;
+
+            try {
+                const response = await fetch("http://jibouli.test/api/login", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email, password }),
+                });
+
+                const data = await response.json();
+
+                if (response.status === 422) {
+                    Swal.fire("Erreur de validation", "Veuillez vérifier vos informations", "warning");
+                } else if (response.status === 404) {
+                    Swal.fire("Erreur", "Aucun compte trouvé avec cet e-mail", "error");
+                } else if (response.status === 401) {
+                    Swal.fire("Erreur", "Mot de passe incorrect", "error");
+                } else if (response.status === 200) {
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Connexion réussie !',
+                        text: 'success',
+                        showConfirmButton: false,
+                        timer: 600  // Closes after 2 seconds
+                    }).then(() => {
+                        if (data.role == "delivery_person") {
+                            localStorage.setItem("livreurJibouli-token", data.token);
+                            window.location.href = "livreur.html"; // Redirection après connexion
+                        } else if (data.role == "employee") {
+                            localStorage.setItem("employeeJibouli-token", data.token);
+                            window.location.href = "employee.html"; // Redirection après connexion
+                        } else if (data.role == "admin") {
+                            localStorage.setItem("adminJibouli-token", data.token);
+                            window.location.href = "admin/dashboard.html"; // Redirection après connexion
+                        } else if (data.role == "partner") {
+                            localStorage.setItem("partnerJibouli-token", data.token);
+                            window.location.href = "partner.html"; // Redirection après connexion
+                        }
+                    });
+                } else {
+                    Swal.fire("Erreur", "Une erreur s'est produite. Veuillez réessayer plus tard.", "error");
+                }
+            } catch (error) {
+                Swal.fire("Erreur réseau", "Impossible de se connecter au serveur", "error");
+            } finally {
+                loginBtn.innerHTML = "Se connecter";
+                loginBtn.disabled = false;
+            }
+        });
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Espace Partenaire - Jibouli</title>
+    <script src="https://unpkg.com/vue@3"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+
+<body class="bg-gray-50">
+    <div id="app" class="min-h-screen bg-gray-50">
+        <!-- Header -->
+        <header class="bg-white shadow-sm">
+            <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
+                <h1 class="text-xl font-bold text-gray-900">Espace Partenaire Jibouli</h1>
+                <button @click="logout"
+                    class="text-red-600 hover:text-red-800 flex items-center justify-center gap-1.5">
+                    <i class="fas fa-sign-out-alt bg-red-300 hover:bg-red-400 rounded-full px-1.5 py-2"></i> <span
+                        class="hidden md:block">Déconnexion</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-2xl font-bold">Vos Commandes</h2>
+                    <button @click="showNewOrderForm = true"
+                        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex">
+                        + <span class="hidden md:block"> Nouvelle Commande</span>
+                    </button>
+                </div>
+
+                <!-- Orders Table -->
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Client</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Statut</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            <tr v-if="orders.length>0" v-for="order in orders" :key="order.id">
+                                <td class="px-6 py-4">#{{ order.id }}</td>
+                                <td class="px-6 py-4">
+                                    <div class="font-medium">{{ order.client.client_name }}</div>
+                                    <div class="text-gray-500">{{ order.client.client_phone }}</div>
+                                </td>
+                                <td class="px-6 py-4">
+                                    <span :class="statusClasses(order.status)" class="px-2 py-1 rounded-full text-sm">
+                                        {{ getStatusLabel(order.status) }}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4">
+                                    {{ formatDate(order.created_at) }}
+                                </td>
+                                <td class="px-6 py-4 space-x-2">
+                                    <button @click="viewOrderDetails(order)"
+                                        class="px-2 py-1.5 bg-green-100 text-green-600 rounded-full hover:bg-green-200 transition">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button v-if="order.status=='pending' || order.status=='accepted'" @click="
+                                    openEditModal(order)"
+                                        class="px-2 py-1.5 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition">
+                                        <i class="fas fa-pen"></i>
+                                    </button>
+                                    <button v-if="order.status=='pending'" @click="
+                                    confirmDelete(order)"
+                                        class="px-2 py-1.5 bg-red-100 text-red-600 rounded-full hover:bg-red-200 transition">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            <tr v-if="orders.length == 0">
+                                <td colspan="100%"
+                                    class="px-6 py-4 text-center text-orange-600 bg-orange-100 font-bold">
+                                    Il n'y a pas encore des commandes enregistrés.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+
+        <!-- New Order Modal -->
+        <div v-if="showNewOrderForm" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg p-6 w-full max-w-2xl">
+                <h3 class="text-xl font-bold mb-4">Nouvelle Commande</h3>
+                <form @submit.prevent="submitOrder">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-1 md:gap-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Nom du Client</label>
+                            <input v-model="newOrder.client_name" required
+                                class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2">
+                        </div>
+                        <!-- Téléphone Client with searchable dropdown -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Téléphone Client</label>
+                            <div class="relative">
+                                <input v-model="newOrder.client_phone" type="tel" required placeholder="+212xxxxxxxxx"
+                                    @input="searchClientsByPhone"
+                                    class="mt-1 block w-full rounded-lg border border-gray-300 shadow-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-400 px-4 py-2">
+                                <div v-if="phoneSuggestions.length > 0"
+                                    class="absolute z-10 w-full bg-white border border-gray-300 rounded-lg mt-1 max-h-48 overflow-y-auto shadow-lg">
+                                    <ul>
+                                        <li v-for="client in phoneSuggestions" :key="client.id"
+                                            @click="selectClient(client)"
+                                            class="px-4 py-2 hover:bg-gray-100 cursor-pointer text-sm">
+                                            {{ client.client_phone }}
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Adresse Client</label>
+                            <textarea v-model="newOrder.client_address" required rows="2"
+                                class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Détails de la commande</label>
+                            <textarea v-model="newOrder.request" required rows="2"
+                                class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Notes Client</label>
+                            <textarea v-model="newOrder.client_notes" rows="2"
+                                class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2"></textarea>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Vos Remarques</label>
+                            <textarea v-model="newOrder.user_notes" rows="2"
+                                class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex justify-end gap-4">
+                        <button type="button" @click="showNewOrderForm = false"
+                            class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition">
+                            Annuler
+                        </button>
+                        <button type="submit"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                            Créer Commande
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Order Details Modal -->
+        <div v-if="selectedOrder" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90%] overflow-y-auto">
+                <h3 class="text-xl font-bold mb-4">Détails de la Commande #{{ selectedOrder.id }}</h3>
+
+                <div class="grid grid-cols-1  gap-2">
+                    <!-- Client Information Section -->
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-lg text-blue-600 mb-2">Informations Client</h4>
+                        <div class="flex flex-col gap-2">
+                            <div>
+                                <p class="text-sm font-medium text-gray-700">Nom complet:
+                                    <span class="mt-1 text-gray-900">{{ selectedOrder.client.client_name }}</span>
+                                </p>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-700">Téléphone:
+                                    <span class="mt-1 text-gray-900">{{ selectedOrder.client.client_phone }}</span>
+                                </p>
+                            </div>
+                            <div class="md:col-span-2">
+                                <p class="text-sm font-medium text-gray-700">Adresse complète:
+                                    <span class="mt-1 text-gray-900">{{ selectedOrder.client.client_address }}</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Order Details Section -->
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-lg text-green-600 mb-2">Détails de la Commande</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            <div>
+                                <p class="text-sm font-medium text-gray-700">Statut</p>
+                                <span :class="statusClasses(selectedOrder.status)"
+                                    class="px-2 py-1 rounded-full text-sm">
+                                    {{ getStatusLabel(selectedOrder.status) }}
+                                </span>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-700">Date de création</p>
+                                <p class="mt-1 text-gray-900">{{ formatDate(selectedOrder.created_at) }}</p>
+                            </div>
+                            <div>
+                                <div class="md:col-span-2">
+                                    <p class="text-sm font-medium text-gray-700">Détails de la commande</p>
+                                    <p class="mt-1 text-gray-900 whitespace-pre-wrap">{{ selectedOrder.request }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Delivery Driver Section (Conditional) -->
+                    <div v-if="selectedOrder.status !== 'pending' && selectedOrder.delivery_person"
+                        class="bg-gray-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-lg text-purple-600 mb-2">Informations Livreur</h4>
+                        <div class="flex flex-col gap-2">
+                            <div class="flex flex-row">
+                                <p class="text-sm font-medium text-gray-700">Nom du livreur:
+                                    <span class="mt-1 text-gray-900">{{
+                                        selectedOrder.delivery_person.delivery_person_name
+                                        }}
+                                    </span>
+                                </p>
+                            </div>
+                            <div class="flex flex-row items-center" v-if="selectedOrder.delivery_person.delivery_phone">
+                                <p class="text-sm font-medium text-gray-700 flex flex-row">Contact livreur:
+                                    <span class="text-gray-900 flex items-center flex gap-2">
+                                        {{ selectedOrder.delivery_person.delivery_phone }}
+                                        <a :href="'tel:' + selectedOrder.delivery_person.delivery_phone" target="_blank"
+                                            class="text-blue-600 hover:text-blue-800 bg-blue-100 px-2 py-1.5 rounded-full">
+                                            <i class="fas fa-phone"></i>
+                                        </a>
+                                        <a :href="'https://wa.me/' + selectedOrder.delivery_person.delivery_phone"
+                                            target="_blank"
+                                            class="text-green-600 hover:text-green-800 bg-green-100 px-2 py-1.5 rounded-full">
+                                            <i class="fab fa-whatsapp"></i>
+                                        </a>
+                                    </span>
+                                </p>
+                            </div>
+                            <div class="flex flex-row" v-if="selectedOrder.delivery_person_notes">
+                                <p class="text-sm font-medium text-gray-700">Notes du livreur:
+                                    <span class="mt-1 text-gray-900">{{ selectedOrder.delivery_person_notes }}</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notes Section -->
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <h4 class="font-semibold text-lg text-orange-600 mb-3">Notes et remarques</h4>
+                        <div class="flex flex-col gap-2">
+                            <div>
+                                <p class="text-sm font-medium text-gray-700">Notes client:
+                                    <span class="mt-1 text-gray-900">
+                                        {{ selectedOrder.client_notes || 'Aucune note client'}}
+                                    </span>
+                                </p>
+                            </div>
+                            <div>
+                                <p class="text-sm font-medium text-gray-700">Vos remarques:
+                                    <span class="mt-1 text-gray-900">
+                                        {{ selectedOrder.user_notes || 'Aucune remarque'}}
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <button @click="selectedOrder = null"
+                    class="mt-6 px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition-colors">
+                    Fermer
+                </button>
+            </div>
+        </div>
+
+        <!-- Edit Order Modal -->
+        <div v-if="showEditModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg p-6 w-full max-w-2xl">
+                <h3 class="text-xl font-bold mb-4">Modifier la Commande #{{ currentOrder.id }}</h3>
+
+                <form @submit.prevent="updateOrder">
+                    <div class="space-y-4">
+                        <!-- Client Information -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Nom Client</label>
+                                <input v-model="currentOrder.client.client_name" required
+                                    class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Téléphone Client</label>
+                                <input v-model="currentOrder.client.client_phone" type="tel" required
+                                    class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2">
+                            </div>
+                            <div class="md:col-span-2">
+                                <label class="block text-sm font-medium text-gray-700">Adresse Client</label>
+                                <textarea v-model="currentOrder.client.client_address" required rows="2"
+                                    class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- Order Details -->
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Détails de la Commande</label>
+                            <textarea v-model="currentOrder.request" required rows="4"
+                                class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2"></textarea>
+                        </div>
+
+                        <!-- Notes Section -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Notes Client</label>
+                                <textarea v-model="currentOrder.client_notes" rows="2"
+                                    class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2"></textarea>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700">Vos Remarques</label>
+                                <textarea v-model="currentOrder.user_notes" rows="2"
+                                    class="mt-1 block w-full rounded-lg border border-gray-300 px-4 py-2"></textarea>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 flex justify-end gap-4">
+                        <button type="button" @click="showEditModal = false"
+                            class="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition">
+                            Annuler
+                        </button>
+                        <button type="submit"
+                            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">
+                            Mettre à Jour
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <script>
+        const app = Vue.createApp({
+            data() {
+                return {
+                    apiUrl: 'http://jibouli.test/api',
+                    orders: [],
+                    showNewOrderForm: false,
+                    selectedOrder: null,
+                    newOrder: {
+                        client_phone: '',
+                        client_name: '',
+                        client_address: '',
+                        request: '',
+                        client_notes: '',
+                        user_notes: ''
+                    },
+
+                    showEditModal: false,
+                    currentOrder: null,
+
+                    clients: [], // Would be populated from API
+                    phoneSuggestions: [],
+                }
+            },
+            mounted() {
+                // Get token from localStorage
+                this.token = localStorage.getItem('partnerJibouli-token');
+                if (!this.token) {
+                    if (!this.token) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'حدث خطأ!',
+                            text: "أنت غير مسجل الدخول.",
+                            confirmButtonText: 'حسنا'
+                        }).then(() => {
+                            window.location.href = "index.html"
+                        });
+                        return;
+                    }
+                }
+                // Set default headers
+                axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`;
+                axios.defaults.headers.common['Accept'] = 'application/json';
+                axios.defaults.headers.common['Content-Type'] = 'application/json';
+
+                // Set up axios interceptors
+                axios.interceptors.request.use(config => {
+                    if (this.token) {
+                        config.headers.Authorization = `Bearer ${this.token}`;
+                    }
+                    return config;
+                });
+
+                this.fetchOrders();
+                this.fetchClients()
+            },
+            methods: {
+                async checkAuth() {
+                    const token = localStorage.getItem('partnerJibouli-token');
+                    if (!token) {
+                        window.location.href = 'index.html';
+                    }
+                    axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+                },
+
+                async fetchOrders() {
+                    try {
+                        const response = await axios.get(this.apiUrl + '/partner/orders');
+                        this.orders = response.data;
+                    } catch (error) {
+                        Swal.fire('Erreur', 'Impossible de charger les commandes', 'error');
+                    }
+                },
+
+                async submitOrder() {
+                    try {
+                        await axios.post(this.apiUrl + '/partner/order', this.newOrder);
+                        this.showNewOrderForm = false;
+                        this.newOrder = {
+                            client_phone: '',
+                            client_name: '',
+                            client_address: '',
+                            request: '',
+                            client_notes: '',
+                            user_notes: ''
+                        };
+                        await this.fetchOrders();
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Succès',
+                            text: 'Commande crée avec succès',
+                            timer: 800,
+                            showConfirmButton: false
+                        });
+                    } catch (error) {
+                        Swal.fire('Erreur', error.response?.data?.message || 'Erreur de création', 'error');
+                    }
+                },
+
+                async viewOrderDetails(order) {
+                    try {
+                        const response = await axios.get(this.apiUrl + `/partner/orders/${order.id}`);
+                        this.selectedOrder = response.data.order;
+                        console.log(response.data)
+                    } catch (error) {
+                        Swal.fire('Erreur', 'Impossible de charger les détails', 'error');
+                    }
+                },
+
+                async fetchClients() {
+                    try {
+                        const response = await axios.get(`${this.apiUrl}/partner/clients`);
+                        this.clients = response.data;
+                    } catch (error) {
+                        console.error('Error fetching orders:', error);
+                    }
+                },
+                searchClientsByPhone() {
+                    // Add safety check for input
+                    const input = (this.newOrder.client_phone || '').replace(/\D/g, '');
+                    console.log(input)
+                    if (!input) {
+                        this.phoneSuggestions = [];
+                        return;
+                    }
+                    this.phoneSuggestions = this.clients.filter(client => {
+                        // Add safety check for client phone number
+                        const clientPhoneDigits = (client.client_phone || '').replace(/\D/g, '');
+                        return clientPhoneDigits.includes(input);
+                    });
+                    console.log(this.phoneSuggestions)
+                },
+
+                selectClient(client) {
+                    this.newOrder.client_phone = client.client_phone;
+                    this.newOrder.client_name = client.client_name;
+                    this.newOrder.client_address = client.client_address;
+                    this.phoneSuggestions = [];
+                },
+
+                openEditModal(order) {
+                    // Create a deep copy to avoid direct mutation
+                    this.currentOrder = JSON.parse(JSON.stringify(order));
+                    this.showEditModal = true;
+                },
+
+                async updateOrder() {
+                    try {
+                        const response = await axios.post(
+                            this.apiUrl + `/partner/order/${this.currentOrder.id}/edit`,
+                            {
+                                client_name: this.currentOrder.client.client_name,
+                                client_phone: this.currentOrder.client.client_phone,
+                                client_address: this.currentOrder.client.client_address,
+                                request: this.currentOrder.request,
+                                client_notes: this.currentOrder.client_notes,
+                                user_notes: this.currentOrder.user_notes
+                            }
+                        );
+
+                        // Show loading indicator
+                        const swal = Swal.fire({
+                            title: 'En cours',
+                            text: 'Veuillez patienter...',
+                            allowOutsideClick: false,
+                            didOpen: () => {
+                                Swal.showLoading();
+                            }
+                        });
+
+                        // Update local orders array
+                        const index = this.orders.findIndex(o => o.id === this.currentOrder.id);
+                        if (index !== -1) {
+                            this.orders.splice(index, 1, response.data);
+                        }
+
+                        this.showEditModal = false;
+                        Swal.fire('Succès!', 'Commande mise à jour avec succès', 'success');
+                    } catch (error) {
+                        Swal.fire('Erreur', error.response?.data?.message || 'Échec de la mise à jour', 'error');
+                    }
+                },
+
+                async confirmDelete(order) {
+                    Swal.fire({
+                        title: 'Confirmer la suppression',
+                        text: `Voulez-vous vraiment supprimer la commande #${order.id} ?`,
+                        icon: 'warning',
+                        showCancelButton: true,
+                        confirmButtonColor: '#d33',
+                        cancelButtonColor: '#3085d6',
+                        confirmButtonText: 'Oui, supprimer',
+                        cancelButtonText: 'Annuler'
+                    }).then(async (result) => {
+                        if (result.isConfirmed) {
+                            await this.deleteOrder(order.id);
+                        }
+                    });
+                },
+
+                async deleteOrder(orderId) {
+                    try {
+                        // Show loading indicator
+                        const swal = Swal.fire({
+                            title: 'Suppression en cours',
+                            text: 'Veuillez patienter...',
+                            allowOutsideClick: false,
+                            didOpen: () => {
+                                Swal.showLoading();
+                            }
+                        });
+                        await axios.delete(this.apiUrl + `/partner/order/${orderId}`);
+
+                        // Remove from local orders array
+                        this.orders = this.orders.filter(order => order.id !== orderId);
+
+                        Swal.fire(
+                            'Supprimé!',
+                            'La commande a été supprimée avec succès.',
+                            'success'
+                        );
+                    } catch (error) {
+                        Swal.fire(
+                            'Erreur!',
+                            error.response?.data?.message || 'Échec de la suppression',
+                            'error'
+                        );
+                    }
+                },
+
+                logout() {
+                    localStorage.removeItem('partnerJibouli-token');
+                    window.location.href = 'index.html';
+                },
+
+                getStatusLabel(status) {
+                    switch (status) {
+                        case 'pending':
+                            return 'En cours';
+                        case 'accepted':
+                            return 'En livraison';
+                        case 'canceled':
+                            return 'Annulé';
+                        case 'delivered':
+                            return 'Livrée';
+                        default:
+                            return '';
+                    }
+                },
+                statusClasses(status) {
+                    return {
+                        'bg-yellow-100 text-yellow-800': status === 'pending',
+                        'bg-blue-100 text-blue-800': status === 'accepted',
+                        'bg-green-100 text-green-800': status === 'delivered',
+                        'bg-red-100 text-red-800': status === 'canceled'
+                    };
+                },
+
+                formatDate(dateString) {
+                    return new Date(dateString).toLocaleDateString('fr-FR', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                }
+            }
+        });
+
+        app.mount('#app');
+    </script>
+</body>
+
+</html>

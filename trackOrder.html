@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تتبع الطلب - جيبولي</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <style>
+        #map {
+            height: 100vh;
+            width: 100%;
+            z-index: 1;
+        }
+
+        .driver-card {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="map"></div>
+    <div id="driverCard"
+        class="driver-card hidden bg-white rounded-lg shadow-lg p-4 min-w-[300px] backdrop-blur-md bg-opacity-90 border border-gray-200">
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="font-semibold text-gray-800 text-lg">الاتصال بالمندوب</h3>
+            <!-- Action Buttons -->
+            <div class="flex justify-center gap-4">
+                <!-- Call Driver -->
+                <a id="callDriver" href="#"
+                    class="px-1.5 py-1 bg-green-100 text-green-600 rounded-full hover:bg-green-200 transition">
+                    <i class="fas fa-phone text-xl"></i>
+                </a>
+
+                <!-- WhatsApp Driver -->
+                <a id="whatsappDriver" href="#" target="_blank"
+                    class="px-1.5 py-1 bg-blue-100 text-blue-600 rounded-full hover:bg-blue-200 transition">
+                    <i class="fab fa-whatsapp text-xl"></i>
+                </a>
+            </div>
+        </div>
+
+    </div>
+
+
+    <script>
+        let map;
+        let marker;
+        let updateInterval;
+        const apiUrl = "http://jibouli.test/api/order";
+        const orderId = new URLSearchParams(window.location.search).get('orderId');
+
+        // Better motorcycle icon
+        const motorcycleIcon = L.icon({
+            iconUrl: 'delivery_driver_icon.png',
+            iconSize: [40, 40],
+            iconAnchor: [20, 20],
+            popupAnchor: [0, -20]
+        });
+
+        // Initialize map
+        function initMap(lat = 33.5731, lng = -7.5898) {
+            map = L.map('map').setView([lat, lng], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+        }
+
+        // Arabic alerts configuration
+        const swalConfig = {
+            confirmButtonText: 'حسناً',
+            buttonsStyling: false,
+            customClass: {
+                confirmButton: 'px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600'
+            },
+            direction: 'rtl'
+        };
+
+        async function fetchDriverLocation() {
+            if (!orderId) {
+                showError('خطأ', 'رقم الطلب غير موجود', true);
+                return;
+            }
+
+            try {
+                const response = await fetch(`${apiUrl}/${orderId}/driverLocation`);
+                const data = await response.json();
+
+                if (!response.ok) {
+                    handleApiError(response.status, data);
+                    return;
+                }
+
+                handleSuccessResponse(data);
+            } catch (error) {
+                showError('خطأ في الاتصال', 'تعذر الاتصال بالخادم');
+                console.error(error);
+            }
+        }
+
+        function handleApiError(status, data) {
+            switch (status) {
+                case 404:
+                    showError('غير موجود', 'هذا الطلب غير موجود', true);
+                    break;
+                case 422:
+                    showWarning('حالة الطلب', data.message || 'الطلب ملغى أو قيد المعالجة، يرجى المحاولة لاحقاً');
+                    break;
+                case 204:
+                    showWarning('معلومات ناقصة', 'لا يوجد سائق معين لهذا الطلب');
+                    break;
+                case 500:
+                    showError('خطأ تقني', 'حدث خطأ في الخادم، يرجى المحاولة لاحقاً');
+                    break;
+                default:
+                    showError('خطأ غير معروف', 'حدث خطأ غير متوقع');
+            }
+        }
+
+        function handleSuccessResponse(data) {
+            const latLng = [data.latitude, data.longitude];
+            if (marker) {
+                marker.setLatLng(latLng);
+            } else {
+                marker = L.marker(latLng, { icon: motorcycleIcon }).addTo(map);
+                map.setView(latLng, 15);
+            }
+
+            document.getElementById('driverCard').classList.remove('hidden');
+            document.getElementById('callDriver').href = `tel:${data.delivery_phone}`;
+            document.getElementById('whatsappDriver').href = `https://wa.me/${data.delivery_phone}`;
+            // document.getElementById('updateTime').textContent = new Date().toLocaleTimeString('ar-SA');
+        }
+
+        // Arabic alert helpers
+        function showError(title, text, stopPolling = false) {
+            Swal.fire({
+                icon: 'error',
+                title,
+                text,
+                ...swalConfig
+            });
+            if (stopPolling) clearInterval(updateInterval);
+        }
+
+        function showWarning(title, text, stopPolling = false) {
+            Swal.fire({
+                icon: 'warning',
+                title,
+                text,
+                ...swalConfig
+            });
+            if (stopPolling) clearInterval(updateInterval);
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!orderId) {
+                showError('خطأ', 'رقم الطلب غير موجود', true);
+                return;
+            }
+
+            initMap();
+            fetchDriverLocation();
+            updateInterval = setInterval(fetchDriverLocation, 15000);
+        });
+    </script>
+</body>
+
+</html>
