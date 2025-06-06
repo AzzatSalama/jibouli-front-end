@@ -304,7 +304,17 @@
             async mounted() {
                 try {
                     this.token = localStorage.getItem('employeeJibouli-token');
-                    if (!this.token) throw new Error('Not authenticated');
+                    if (!this.token) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'حدث خطأ!',
+                            text: "أنت غير مسجل الدخول.",
+                            confirmButtonText: 'حسنا'
+                        }).then(() => {
+                            window.location.href = "index.html"
+                        });
+                        return;
+                    }
 
                     // Configure axios
                     axios.defaults.headers.common = {
@@ -317,6 +327,17 @@
                     await this.loadEmployeeData();
                     this.setupAutoRefresh();
                     this.fetchClients()
+
+                    const tokenRegistered = localStorage.getItem('employeeNotifTokenHasBeenRegistred') === "true";
+                    if (!tokenRegistered) {
+                        // Add the path to the file responsible for handling notifications
+                        const script = document.createElement('script');
+                        script.type = 'module';
+                        script.src = 'admin/notificationHandler.js';
+
+                        // Append the script element to the document's body
+                        document.body.appendChild(script);
+                    }
 
                 } catch (error) {
                     console.error(error.message)
