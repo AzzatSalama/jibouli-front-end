@@ -63,7 +63,17 @@ function requestPermissionAndRegister() {
 }
 
 function registerServiceWorkerAndSaveToken() {
-    navigator.serviceWorker.register("admin/sw.js").then(registration => {
+    // Dynamically determine the correct path to sw.js based on current location
+    // Determine the correct path to sw.js relative to the current location
+    let swPath;
+    if (location.pathname.startsWith('/admin/')) {
+        swPath = '/admin/sw.js';
+    } else {
+        swPath = '/sw.js';
+    }
+    console.log("Service Worker path:", swPath);
+
+    navigator.serviceWorker.register(swPath).then(registration => {
         getToken(messaging, {
             serviceWorkerRegistration: registration,
             vapidKey: 'BCkb_xDqsSE1NIA5PKvzYzNVOpM3eWdo_A8NwctOt5Oh0mWpQoz0VB3adE4eQCkqrxZO_sHbFUxqCCsvYH08-Co'
@@ -80,6 +90,9 @@ function registerServiceWorkerAndSaveToken() {
 }
 
 function saveDeviceToken(notificationToken) {
+    const token = localStorage.getItem('livreurJibouli-token')
+        || localStorage.getItem('adminJibouli-token')
+        || localStorage.getItem('employeeJibouli-token');
     fetch("https://jibouli.lvmanager.net/api/notification/token", {
         method: "POST",
         headers: {
