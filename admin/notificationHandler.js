@@ -67,9 +67,9 @@ function registerServiceWorkerAndSaveToken() {
     // Determine the correct path to sw.js relative to the current location
     let swPath;
     if (location.pathname.startsWith('/admin/')) {
-        swPath = '/admin/sw.js';
-    } else {
         swPath = '/sw.js';
+    } else {
+        swPath = '/admin/sw.js';
     }
     console.log("Service Worker path:", swPath);
 
