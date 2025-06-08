@@ -28,7 +28,7 @@ function isInStandaloneMode() {
 function main() {
 
     if (isIOS() && !isInStandaloneMode()) {
-        console.log("iOS device detected – app is not installed as PWA. Notifications won't work.");
+        alert("iOS device detected – app is not installed as PWA. Notifications won't work.");
         return;
     }
 
@@ -47,7 +47,7 @@ function requestPermissionManually() {
         if (permission === "granted") {
             registerServiceWorkerAndSaveToken();
         } else {
-            console.log("Permission denied by user.");
+            alert("Permission denied by user.");
         }
     });
 }
@@ -57,7 +57,7 @@ function requestPermissionAndRegister() {
         if (permission === "granted") {
             registerServiceWorkerAndSaveToken();
         } else {
-            console.log("Permission denied.");
+            alert("Permission denied.");
         }
     });
 }
@@ -71,7 +71,7 @@ function registerServiceWorkerAndSaveToken() {
     } else {
         swPath = '/admin/sw.js';
     }
-    console.log("Service Worker path:", swPath);
+    alert("Service Worker path:", swPath);
 
     navigator.serviceWorker.register(swPath).then(registration => {
         getToken(messaging, {
@@ -81,7 +81,7 @@ function registerServiceWorkerAndSaveToken() {
             if (currentToken) {
                 saveDeviceToken(currentToken);
             } else {
-                console.log("No token available.");
+                alert("No token available.");
             }
         }).catch((err) => {
             console.error("Error getting token:", err);
@@ -104,7 +104,7 @@ function saveDeviceToken(notificationToken) {
         .then(response => response.json())
         .then(data => {
             if (data.status === "success" || data.status === "already_registered") {
-                console.log("Token saved:", data.message);
+                alert("Token saved:", data.message);
                 localStorage.setItem(data.role + "NotifTokenHasBeenRegistred", true);
                 cleanupScripts();
             } else {
@@ -129,7 +129,7 @@ function showiOSNotificationPrompt() {
         if (result.isConfirmed) {
             requestPermissionManually();
         } else {
-            console.log("المستخدم رفض تفعيل الإشعارات.");
+            alert("المستخدم رفض تفعيل الإشعارات.");
         }
     });
 }
