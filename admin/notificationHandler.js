@@ -28,7 +28,7 @@ function isInStandaloneMode() {
 function main() {
 
     if (isIOS() && !isInStandaloneMode()) {
-        alert("iOS device detected – app is not installed as PWA. Notifications won't work.");
+        console.log("iOS device detected – app is not installed as PWA. Notifications won't work.");
         return;
     }
 
@@ -47,7 +47,7 @@ function requestPermissionManually() {
         if (permission === "granted") {
             registerServiceWorkerAndSaveToken();
         } else {
-            alert("Permission denied by user.");
+            console.log("Permission denied by user.");
         }
     });
 }
@@ -57,7 +57,7 @@ function requestPermissionAndRegister() {
         if (permission === "granted") {
             registerServiceWorkerAndSaveToken();
         } else {
-            alert("Permission denied.");
+            console.log("Permission denied.");
         }
     });
 }
@@ -71,7 +71,7 @@ function registerServiceWorkerAndSaveToken() {
     } else {
         swPath = '/admin/sw.js';
     }
-    alert("Service Worker path:", swPath);
+    console.log("Service Worker path:", swPath);
 
     navigator.serviceWorker.register(swPath).then(registration => {
         getToken(messaging, {
@@ -81,7 +81,7 @@ function registerServiceWorkerAndSaveToken() {
             if (currentToken) {
                 saveDeviceToken(currentToken);
             } else {
-                alert("No token available.");
+                console.log("No token available.");
             }
         }).catch((err) => {
             console.error("Error getting token:", err);
@@ -104,7 +104,7 @@ function saveDeviceToken(notificationToken) {
         .then(response => response.json())
         .then(data => {
             if (data.status === "success" || data.status === "already_registered") {
-                alert("Token saved:", data.message);
+                console.log("Token saved:", data.message);
                 localStorage.setItem(data.role + "NotifTokenHasBeenRegistred", true);
                 cleanupScripts();
             } else {
@@ -116,7 +116,7 @@ function saveDeviceToken(notificationToken) {
         });
 }
 
-// iOS notification prompt with SweetAlert2 in Arabic
+// iOS notification prompt with Sweetconsole.log2 in Arabic
 function showiOSNotificationPrompt() {
     Swal.fire({
         title: 'هل ترغب في تفعيل الإشعارات؟',
@@ -129,7 +129,7 @@ function showiOSNotificationPrompt() {
         if (result.isConfirmed) {
             requestPermissionManually();
         } else {
-            alert("المستخدم رفض تفعيل الإشعارات.");
+            console.log("المستخدم رفض تفعيل الإشعارات.");
         }
     });
 }

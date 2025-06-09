@@ -32,9 +32,9 @@
                 </div>
                 <div class="flex items-center space-x-4">
                     <span class="text-sm text-gray-700">Available:</span>
-                    <button @click="toggleAvailability" :class="[isAvailable ? 'bg-green-500' : 'bg-gray-200']"
+                    <button @click="toggleAvailability" :class="[isAvailable==true ? 'bg-green-500' : 'bg-gray-200']"
                         class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none">
-                        <span :class="[isAvailable ? 'translate-x-6' : 'translate-x-1']"
+                        <span :class="[isAvailable==true ? 'translate-x-6' : 'translate-x-1']"
                             class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform" />
                     </button>
                 </div>
@@ -46,8 +46,7 @@
             <div v-if="showBalanceWarning && !showBalanceError"
                 class="bg-orange-100 text-orange-500 p-4 flex items-center rounded-lg justify-between mb-6">
                 <div class="flex-1 text-center">
-                    ⚠️ Votre solde est faible ({{ deliveryPerson.balance }} DH). Veuillez recharger votre compte
-                    bientôt.
+                    ⚠️ رصيدك منخفض ({{ deliveryPerson.balance }} درهم). يرجى إعادة شحن حسابك قريباً.
                 </div>
                 <button @click="showBalanceWarning = false"
                     class="ml-4 p-1 hover:bg-orange-500 hover:text-white border border-orange-500 rounded-full">
@@ -62,19 +61,23 @@
             <div v-if="showBalanceError"
                 class="bg-red-100 text-red-500 p-6 flex items-center rounded-lg justify-between mb-6">
                 <div class="flex-1 text-center">
-                    ⚠️ Votre solde est épuisé. Veuillez recharger votre compte.
+                    ⚠️ رصيدك منتهي. يرجى إعادة شحن حسابك.
                 </div>
             </div>
 
+            <!-- if the delivery person status is inactive -->
+            <div v-if="isAvailable==0 && !showBalanceError"
+                class="p-6 bg-yellow-100 text-yellow-800 font-bold w-full rounded-lg text-center items-center mb-6">
+                🚦 يجب أن تكون <span class="text-green-600">نشطًا</span> لتلقي ورؤية الطلبات الجديدة.
+            </div>
 
             <!-- if no order is accepted and ther's no order yet -->
-            <div v-if="!acceptedOrder && pendingOrders.length==0 && !showBalanceError"
+            <div v-if="isAvailable!=0 && !acceptedOrder && pendingOrders.length==0 && !showBalanceError"
                 class="p-6 bg-gray-200 text-gray-800 font-bold w-full rounded-lg text-center items-center">
-                🤷🏻‍♂️🤷🏻‍♂️Aucun
-                commande pour le
-                momant🤷🏻‍♂️🤷🏻‍♂️</div>
+                🤷🏻‍♂️🤷🏻‍♂️ لا توجد أي طلبات حالياً 🤷🏻‍♂️🤷🏻‍♂️
+            </div>
             <!-- Accepted Order -->
-            <div v-if="acceptedOrder" class="mb-8">
+            <div v-if="isAvailable!=0 && acceptedOrder" class="mb-8">
                 <div
                     class="bg-white rounded-2xl shadow-xl p-6 border border-gray-100 transform transition-all hover:shadow-2xl">
                     <!-- Header Section -->
@@ -127,7 +130,7 @@
                                 DÉTAILS DE COMMANDE
                             </h3>
                             <div class="space-y-2">
-                                <p class="text-gray-700"><span class="font-medium">Demande:</span> {{
+                                <p class="text-gray-700 font-extrabold"><span class="font-medium">Demande:</span> {{
                                     acceptedOrder.request }}</p>
                                 <p class="text-gray-700"><span class="font-medium">Notes Client:</span> {{
                                     acceptedOrder.client_notes || '-' }}</p>
@@ -388,17 +391,17 @@
                 showSuccess(message) {
                     Swal.fire({
                         icon: 'success',
-                        title: 'Succès',
+                        title: 'نجاح',
                         text: message,
-                        confirmButtonText: 'OK'
+                        confirmButtonText: 'حسنا'
                     });
                 },
                 showError(message) {
                     Swal.fire({
                         icon: 'error',
-                        title: 'Erreur',
+                        title: 'خطأ',
                         text: message,
-                        confirmButtonText: 'OK'
+                        confirmButtonText: 'حسنا'
                     });
                 },
 
@@ -422,6 +425,9 @@
                         this.isAvailable = this.deliveryPerson.delivery_person.is_available;
                         this.canToggleVisibility = true
 
+                        //if the driver is inactive then stop everything
+                        if (this.isAvailable == 0) return
+
                         //if balance is 2 then stop everything
                         if (this.deliveryPerson.balance <= 2) {
                             this.showBalanceError = true;
@@ -442,7 +448,7 @@
                         }
 
                         // Only fetch pending orders if available and no active order
-                        if (this.isAvailable) {
+                        if (this.isAvailable == true) {
                             const ordersRes = await axios.get(this.apiUrl + '/orders/pending');
                             this.processPendingOrders(ordersRes.data);
                         }
@@ -451,77 +457,67 @@
                             // Handle 401 error specifically
                             Swal.fire({
                                 icon: 'error',
-                                title: 'Erreur!',
-                                text: "Vous n'êtes pas connecté.",
+                                title: 'حدث خطأ!',
+                                text: "أنت غير مسجل الدخول.",
                                 confirmButtonText: 'OK'
                             }).then(() => {
                                 window.location.href = "index.html";
                             });
                         } else {
-                            this.showError(error.response?.data?.message || 'Erreur de chargement des données');
+                            this.showError(error.response?.data?.message || 'حدث خطأ أثناء تحميل البيانات');
                             console.error('Error loading data:', error);
                         }
                     }
                 },
 
                 processPendingOrders(newOrders) {
-                    const newHash = JSON.stringify(newOrders);
-                    if (newHash !== this.lastPendingOrdersHash) {
-                        this.pendingOrders = newOrders;
-                        this.lastPendingOrdersHash = newHash;
+                    this.pendingOrders = newOrders;
+                    // const newHash = JSON.stringify(newOrders);
+                    // if (newHash !== this.lastPendingOrdersHash) {
+                    //     this.lastPendingOrdersHash = newHash;
 
-                        if (newOrders.length > this.pendingOrders.length) {
-                            this.showSuccess('Nouvelles commandes disponibles !');
-                        }
-                    }
+                    //     if (newOrders.length > this.pendingOrders.length) {
+                    //         this.showSuccess('Nouvelles commandes disponibles !');
+                    //     }
+                    // }
                 },
 
                 async toggleAvailability() {
-                    if (!this.canToggleVisibility) return
+                    if (!this.canToggleVisibility) return;
+                    if (this.deliveryPerson.balance <= 2) {
+                        this.showError("⚠️ رصيدك منتهي. يرجى إعادة شحن حسابك.");
+                        return;
+                    }
+                    if (this.acceptedOrder) {
+                        this.showError("يجب عليك إنهاء أو رفض الطلب الحالي قبل تغيير حالتك.");
+                        return;
+                    }
+                    const newAvailability = !(this.isAvailable == true);
                     try {
-                        if (this.deliveryPerson.balance <= 2) {
-                            this.showError("⚠️ Votre solde est épuisé. Veuillez recharger votre compte.")
-                            return
-                        }
-                        const newAvailability = !this.isAvailable;
-
-                        const result = await this.showConfirmation(
-                            `Voulez-vous vraiment vous rendre ${newAvailability ? 'disponible' : 'indisponible'} ?`
+                        const { isConfirmed } = await this.showConfirmation(
+                            `هل تريد فعلاً أن تصبح ${newAvailability ? 'متاحًا' : 'غير متاح'}؟`
                         );
+                        if (!isConfirmed) return;
 
-                        if (result.isConfirmed) {
-                            await axios.put(this.apiUrl + '/delivery/availability', {
-                                is_available: newAvailability
-                            });
-                            this.isAvailable = newAvailability;
+                        await axios.put(this.apiUrl + '/delivery/availability', { is_available: newAvailability });
+                        this.isAvailable = newAvailability;
 
-                            if (newAvailability) {
-                                await this.loadData();
-                                Swal.fire({
-                                    icon: 'success',
-                                    title: 'Succès',
-                                    text: 'Statut de disponibilité mis à jour',
-                                    wait: 1100
-                                });
-                            } else {
-                                this.pendingOrders = [];
-                                Swal.fire({
-                                    icon: 'success',
-                                    title: 'Succès',
-                                    text: 'Vous êtes maintenant indisponible',
-                                    wait: 1100
-                                });
-                            }
+                        if (newAvailability) {
+                            this.loadData();
+                            this.showSuccess('تم تحديث حالتك  بنجاح');
+                        } else {
+                            this.pendingOrders = [];
+                            this.showSuccess('أنت الآن غير متاح');
                         }
                     } catch (error) {
-                        this.showError(error.response?.data?.message || 'Erreur de mise à jour de disponibilité');
+                        this.showError(error.response?.data?.message || 'حدث خطأ أثناء تحديث حالة التوفر');
                         console.error('Error updating availability:', error);
                     }
                 },
 
                 async acceptOrder(orderId) {
                     try {
-                        const result = await this.showConfirmation('Voulez-vous vraiment accepter cette commande ?');
+                        const result = await this.showConfirmation('هل تريد فعلاً قبول هذه الطلبية؟');
                         if (!result.isConfirmed) return;
 
                         const response = await axios.post(this.apiUrl + `/orders/${orderId}/accept`);
@@ -529,21 +525,21 @@
                         this.acceptedOrder = response.data.order;
                         this.pendingOrders = [];
                         this.canToggleVisibility = false
-                        this.showSuccess('Commande acceptée avec succès');
+                        this.showSuccess('تم قبول الطلب بنجاح');
                         // this.startLocationTracking();
                     } catch (error) {
                         if (error.response && error.response.status === 401) {
                             // Handle 401 error specifically
                             Swal.fire({
                                 icon: 'error',
-                                title: 'Erreur!',
-                                text: "Vous n'êtes pas connecté.",
+                                title: 'حدث خطأ!',
+                                text: "أنت غير مسجل الدخول.",
                                 confirmButtonText: 'OK'
                             }).then(() => {
                                 window.location.href = "index.html";
                             });
                         } else {
-                            this.showError(error.response?.data?.message || 'Erreur de chargement des données');
+                            this.showError(error.response?.data?.message || 'حدث خطأ أثناء تحميل البيانات');
                             console.error('Error loading data:', error);
                         }
                     }
@@ -552,7 +548,7 @@
                 async updateOrderStatus() {
                     try {
                         const result = await this.showConfirmation(
-                            `Confirmez-vous le statut "${this.selectedStatus}" pour cette commande ?`
+                            `هل تؤكد تغيير حالة الطلب إلى "${this.selectedStatus == "canceled" ? "ملغاة" : this.selectedStatus == "delivered" ? "تم التوصيل" : this.selectedStatus == "accepted" ? "قيد التنفيذ" : ""}"؟`
                         );
                         if (!result.isConfirmed) {
                             this.selectedStatus = "accepted"; // Reset to current status
@@ -567,14 +563,14 @@
                             // Handle 401 error specifically
                             Swal.fire({
                                 icon: 'error',
-                                title: 'Erreur!',
-                                text: "Vous n'êtes pas connecté.",
+                                title: 'حدث خطأ!',
+                                text: "أنت غير مسجل الدخول.",
                                 confirmButtonText: 'OK'
                             }).then(() => {
                                 window.location.href = "index.html";
                             });
                         } else {
-                            this.showError(error.response?.data?.message || 'Erreur de chargement des données');
+                            this.showError(error.response?.data?.message || 'حدث خطأ أثناء تحميل البيانات');
                             console.error('Error loading data:', error);
                         }
                     }
@@ -582,11 +578,11 @@
 
                 async rejectOrder() {
                     try {
-                        const result = await this.showConfirmation('Voulez-vous vraiment rejeter cette commande ?');
+                        const result = await this.showConfirmation('هل تريد فعلاً رفض هذه الطلبية؟');
                         if (!result.isConfirmed) return;
 
                         await axios.post(this.apiUrl + `/order/${this.acceptedOrder.id}/reject`);
-                        this.showSuccess('Commande rejetée avec succès');
+                        this.showSuccess('تم رفض الطلب بنجاح');
 
                         // Add the rejected order ID to the rejectedOrders array
                         this.rejectedOrders.push(this.acceptedOrder.id);
@@ -601,8 +597,8 @@
                         if (error.response && error.response.status === 401) {
                             Swal.fire({
                                 icon: 'error',
-                                title: 'Erreur!',
-                                text: "Vous n'êtes pas connecté.",
+                                title: 'حدث خطأ!',
+                                text: "أنت غير مسجل الدخول.",
                                 confirmButtonText: 'OK'
                             }).then(() => {
                                 window.location.href = "index.html";
@@ -624,8 +620,8 @@
                 async submitStatusWithNotes() {
                     try {
                         const swal = Swal.fire({
-                            title: 'En cours',
-                            text: 'Veuillez patienter...',
+                            title: 'جاري التنفيذ',
+                            text: 'يرجى الانتظار...',
                             allowOutsideClick: false,
                             didOpen: () => {
                                 Swal.showLoading();
@@ -646,11 +642,11 @@
                         // Handle post-update logic
                         if (this.selectedStatus === 'delivered') {
                             this.deliveryPerson.balance -= 2;
-                            this.showSuccess('Commande marquée comme livrée');
+                            this.showSuccess('تم وضع علامة تم التوصيل على الطلب');
                         }
 
                         if (this.selectedStatus === 'canceled') {
-                            this.showSuccess('Commande annulée');
+                            this.showSuccess('تم إلغاء الطلب');
                         }
 
                         this.acceptedOrder = null;
@@ -662,14 +658,14 @@
                             // Handle 401 error specifically
                             Swal.fire({
                                 icon: 'error',
-                                title: 'Erreur!',
-                                text: "Vous n'êtes pas connecté.",
-                                confirmButtonText: 'OK'
+                                title: 'حدث خطأ!',
+                                text: "أنت غير مسجل الدخول.",
+                                confirmButtonText: 'حسنا'
                             }).then(() => {
                                 window.location.href = "index.html";
                             });
                         } else {
-                            this.showError(error.response?.data?.message || 'Erreur d\'envoi des commentaires');
+                            this.showError(error.response?.data?.message || 'حدث خطأ أثناء إرسال الملاحظات');
                             console.error('Error loading data:', error);
                         }
                     }
@@ -693,22 +689,22 @@
 
                         Swal.fire({
                             icon: 'success',
-                            title: 'Client ajouté',
-                            text: 'Le nouveau client a été créé avec succès',
+                            title: 'تم إضافة العميل',
+                            text: 'تم إنشاء العميل الجديد بنجاح',
                             timer: 800,
                             showConfirmButton: false
                         });
 
                         this.closeAddClientModal();
                     } catch (error) {
-                        const errorMessage = error.response?.data || error.message || 'Échec de la création du client';
+                        const errorMessage = error.response?.data || error.message || 'فشل في إنشاء العميل';
                         Swal.fire({
                             icon: 'error',
-                            title: 'Erreur',
+                            title: 'خطأ',
                             text: typeof errorMessage === 'object'
                                 ? Object.values(errorMessage).flat().join(', ')
                                 : errorMessage,
-                            confirmButtonText: 'OK'
+                            confirmButtonText: 'حسنا'
                         });
                     }
                 },
@@ -720,8 +716,8 @@
                         !this.newClient.client_address.trim()) {
                         Swal.fire({
                             icon: 'warning',
-                            title: 'Champs requis',
-                            text: 'Veuillez remplir tous les champs',
+                            title: 'الحقول مطلوبة',
+                            text: 'يرجى ملء جميع الحقول',
                             confirmButtonText: 'OK'
                         });
                         return false;
@@ -732,8 +728,8 @@
                     if (!phoneRegex.test(this.newClient.client_phone)) {
                         Swal.fire({
                             icon: 'warning',
-                            title: 'Format téléphone invalide',
-                            text: 'Veuillez entrer un numéro de téléphone valide au format international (ex: +1234567890)',
+                            title: 'تنسيق رقم الهاتف غير صالح',
+                            text: 'يرجى إدخال رقم هاتف صحيح بصيغة دولية (مثال: +1234567890)',
                             confirmButtonText: 'OK'
                         });
                         return false;
@@ -757,16 +753,12 @@
 
                 startOrderPolling() {
                     this.orderPollInterval = setInterval(async () => {
-                        if (this.shouldPoll && !this.acceptedOrder && this.isAvailable && this.deliveryPerson.balance > 2) {
-                            try {
-                                console.log('fteching orders...')
-                                const response = await axios.get(this.apiUrl + '/orders/pending');
-                                this.processPendingOrders(response.data);
-                            } catch (error) {
-                                console.error('Error polling orders:', error);
-                            }
-                        } else {
-                            this.isAvailable = false
+                        try {
+                            console.log('fteching orders...')
+                            const response = await axios.get(this.apiUrl + '/orders/pending');
+                            this.processPendingOrders(response.data);
+                        } catch (error) {
+                            console.error('Error polling orders:', error);
                         }
                     }, 5000);//refetch every 5 seconds
                 },
@@ -916,10 +908,8 @@
                 // Load initial data
                 this.loadData().finally(() => {
                     // Only start polling if available
-                    if (this.isAvailable && this.deliveryPerson.balance > 2) {
+                    if (this.shouldPoll && !this.acceptedOrder && this.isAvailable == true && this.deliveryPerson.balance > 2) {
                         this.startOrderPolling();
-                    } else if (!this.isAvailable) {
-                        this.isAvailable = false
                     }
                 });
 
@@ -935,15 +925,15 @@
                 }
             },
             watch: {
-                isAvailable(newVal) {
-                    this.shouldPoll = newVal;
-                    if (newVal) {
-                        this.loadData();
-                        this.startOrderPolling();
-                    } else {
-                        this.pendingOrders = [];
-                    }
-                }
+                // isAvailable(newVal) {
+                //     this.shouldPoll = newVal;
+                //     if (newVal) {
+                //         this.loadData();
+                //         this.startOrderPolling();
+                //     } else {
+                //         this.pendingOrders = [];
+                //     }
+                // }
             },
             beforeUnmount() {
                 clearInterval(this.orderPollInterval);
