@@ -322,7 +322,7 @@
                     activePartner: null,
                     dateFilters: { from: null, to: null },
                     statsData: { total: 0, delivered: 0, canceled: 0 },
-                    editForm: { id: null, name: '', phone: '', address: '', type: 'snack', lat: '', lang: '', email: '', password: '' },
+                    editForm: { id: null, name: '', livreur_phone: '', address: '', type: 'snack', lat: '', lang: '', email: '', password: '' },
                     chart: null,
 
 
@@ -349,6 +349,7 @@
                 axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`;
                 axios.defaults.headers.common['Accept'] = 'application/json';
                 axios.defaults.headers.common['Content-Type'] = 'application/json';
+                axios.defaults.headers.common['X-Client-Domain'] = window.location.origin;
 
                 // Set up axios interceptors
                 axios.interceptors.request.use(config => {

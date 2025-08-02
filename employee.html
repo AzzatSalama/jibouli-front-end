@@ -361,7 +361,8 @@
                     axios.defaults.headers.common = {
                         'Authorization': `Bearer ${this.token}`,
                         'Accept': 'application/json',
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'X-Client-Domain': window.location.origin
                     };
 
                     // Load initial data

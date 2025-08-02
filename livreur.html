@@ -255,7 +255,8 @@
             </div>
 
             <!-- Rejected Orders Grid -->
-            <div v-if="rejectedOrders.length > 0" class="my-6">
+            <div v-if="rejectedOrders.length > 0 && pendingOrders.filter(order => rejectedOrders.includes(order.id))"
+                class="my-6">
                 <h3 class="text-2xl font-bold text-red-600">🚫 Commandes Rejetées</h3>
             </div>
 
@@ -344,7 +345,7 @@
                 return {
                     showBalanceWarning: false,
                     showBalanceError: false,
-                    apiUrl: "https://jibouli.lvmanager.net/api",
+                    apiUrl: "http://jibouli.test/api",
                     token: "",
                     deliveryPerson: {},
                     isAvailable: false,
@@ -893,6 +894,7 @@
                 axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`;
                 axios.defaults.headers.common['Accept'] = 'application/json';
                 axios.defaults.headers.common['Content-Type'] = 'application/json';
+                axios.defaults.headers.common['X-Client-Domain'] = window.location.origin;
 
                 // Set up axios interceptors
                 axios.interceptors.request.use(config => {
@@ -902,8 +904,6 @@
                     return config;
                 });
 
-                const storedRejectedOrders = localStorage.getItem('rejectedOrders');
-                this.rejectedOrders = storedRejectedOrders ? JSON.parse(storedRejectedOrders) : [];
 
                 // Load initial data
                 this.loadData().finally(() => {
@@ -912,6 +912,24 @@
                         this.startOrderPolling();
                     }
                 });
+
+                const storedRejectedOrders = localStorage.getItem('rejectedOrders');
+                // Parse storedRejectedOrders if it exists
+                if (storedRejectedOrders) {
+                    const rejectedOrders = JSON.parse(storedRejectedOrders);
+                    // Check if any rejected order still exists in pendingOrders
+                    const hasRejectedInPending = Array.isArray(this.pendingOrders) && rejectedOrders.some(id =>
+                        this.pendingOrders.some(order => order.id === id)
+                    );
+                    if (hasRejectedInPending) {
+                        this.rejectedOrders = rejectedOrders;
+                    } else {
+                        this.rejectedOrders = [];
+                        localStorage.removeItem('rejectedOrders');
+                    }
+                } else {
+                    this.rejectedOrders = [];
+                }
 
                 const tokenRegistered = localStorage.getItem('delivery_personNotifTokenHasBeenRegistred') === "true";
                 if (!tokenRegistered) {
