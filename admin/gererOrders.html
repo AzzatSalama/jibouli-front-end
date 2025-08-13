@@ -777,7 +777,7 @@
                         const fetchDriverLocation = async () => {
                             try {
                                 const response = await axios.get(`${this.apiUrl}/order/${orderId}/driverLocation`);
-                                this.trackingLink = `https://jibouli.com/trackOrder.html?order=${orderId}`;
+                                this.trackingLink = `https://jibouli.lvmanager.net/trackOrder.html?order=${orderId}`;
 
                                 this.$nextTick(() => {
                                     // Initialize or update map

@@ -242,12 +242,12 @@
                                     <!-- <div class="pt-2">
                                         <span class="font-medium text-gray-700">Lien de Suivi:</span>
                                         <div class="flex items-center gap-2">
-                                            <a :href="`https://jibouli.com/trackOrder.html?order=${order.id}`"
+                                            <a :href="`https://jibouli.lvmanager.net/trackOrder.html?order=${order.id}`"
                                                 target="_blank"
                                                 class="text-blue-600 hover:text-blue-800 text-sm truncate">
-                                                https://jibouli.com/trackOrder.html?order={{ order.id }}
+                                                https://jibouli.lvmanager.net/trackOrder.html?order={{ order.id }}
                                             </a>
-                                            <a :href="`https://wa.me/${order.client.client_phone}?text=${encodeURIComponent(`السلام عليكم ${order.client.client_name} \nطلبك في الطريق \nيمكنك تتبع حالة الطلب مباشرة عبر هذا الرابط:\nhttps://jibouli.com/trackOrder.html?order=${order.id}`)}`"
+                                            <a :href="`https://wa.me/${order.client.client_phone}?text=${encodeURIComponent(`السلام عليكم ${order.client.client_name} \nطلبك في الطريق \nيمكنك تتبع حالة الطلب مباشرة عبر هذا الرابط:\nhttps://jibouli.lvmanager.net/trackOrder.html?order=${order.id}`)}`"
                                                 target="_blank"
                                                 class="inline-flex items-center gap-2 text-green-600 hover:text-green-800 text-sm">
                                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4"
@@ -603,7 +603,7 @@
                 },
 
                 copyTrackingLink(orderId) {
-                    const link = `https://jibouli.com/trackOrder.html?order=${orderId}`;
+                    const link = `https://jibouli.lvmanager.net/trackOrder.html?order=${orderId}`;
                     navigator.clipboard.writeText(link).then(() => {
                         Swal.fire({
                             icon: 'success',
