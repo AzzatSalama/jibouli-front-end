@@ -18,11 +18,18 @@
         <header class="bg-white shadow-sm">
             <div class="max-w-7xl mx-auto py-4 px-4 sm:px-6 lg:px-8 flex justify-between items-center">
                 <h1 class="text-xl font-bold text-gray-900">Espace Partenaire Jibouli</h1>
-                <button @click="logout"
-                    class="text-red-600 hover:text-red-800 flex items-center justify-center gap-1.5">
-                    <i class="fas fa-sign-out-alt bg-red-300 hover:bg-red-400 rounded-full px-1.5 py-2"></i> <span
-                        class="hidden md:block">Déconnexion</span>
-                </button>
+                <div class="flex flex-row gap-1 md:gap-3">
+                    <button @click="logout"
+                        class="text-red-600 hover:text-red-800 flex items-center justify-center gap-1.5">
+                        <i class="fas fa-sign-out-alt bg-red-300 hover:bg-red-400 rounded-full px-1.5 py-2"></i> <span
+                            class="hidden md:block">Déconnexion</span>
+                    </button>
+                    <a href="https://wa.me/212709064852" target="_blank"
+                        class="text-green-600 hover:text-green-800 flex items-center justify-center gap-1.5 ml-4">
+                        <i class="fab fa-whatsapp bg-green-300 hover:bg-green-400 rounded-full px-1.5 py-2"></i> <span
+                            class="hidden md:block">Support</span>
+                    </a>
+                </div>
             </div>
         </header>
 
@@ -613,6 +620,98 @@
         });
 
         app.mount('#app');
+
+        // Add this script to your main JavaScript file or <script> tags
+        document.addEventListener('DOMContentLoaded', function () {
+            // Check if the app is running in standalone mode (already installed)
+            if (window.matchMedia('(display-mode: standalone)').matches) {
+                return;
+            }
+
+            // Check if the browser supports installation
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+            const isAndroid = /Android/.test(navigator.userAgent);
+
+            // Only show for mobile devices
+            if (!isIOS && !isAndroid) {
+                return;
+            }
+
+            // Check if we've shown this before (using localStorage)
+            const hasShownPrompt = localStorage.getItem('hasShownInstallPrompt');
+            if (hasShownPrompt) {
+                return;
+            }
+
+            // Wait a few seconds after page load before showing
+            setTimeout(() => {
+                showInstallPrompt();
+            }, 10000); // 10 seconds delay
+
+            function showInstallPrompt() {
+                Swal.fire({
+                    title: 'Ajouter à l\'écran d\'accueil',
+                    html: `
+                <div class="text-left">
+                    <p class="mb-4">Pour un accès plus facile, ajoutez cette application à votre écran d'accueil :</p>
+                    
+                    ${isIOS ? `
+                        <div class="flex items-start gap-3 mb-3">
+                            <div class="mt-1">
+                                <span class="bg-blue-100 text-blue-800 rounded-full px-3 py-1 font-bold">1</span>
+                            </div>
+                            <div>
+                                Appuyez sur <span class="font-bold">Partager</span> <svg class="w-5 h-5 inline" fill="currentColor" viewBox="0 0 24 24"><path d="M8.5 18.31a1.2 1.2 0 0 1-1.76 0 1.24 1.24 0 0 1 0-1.8L12 10.4l5.28 6.12a1.24 1.24 0 0 1 0 1.8 1.2 1.2 0 0 1-1.76 0L12 14l-3.5 4.31z"/><path d="M12 13.16a1.19 1.19 0 0 1-.88-.37L5.74 7.19a1.24 1.24 0 0 1 0-1.8 1.2 1.2 0 0 1 1.76 0L12 10.4l4.5-5.02a1.2 1.2 0 0 1 1.76 0 1.24 1.24 0 0 1 0 1.8l-5.38 6.6a1.19 1.19 0 0 1-.88.37z"/></svg> en bas de votre navigateur
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <div class="mt-1">
+                                <span class="bg-blue-100 text-blue-800 rounded-full px-3 py-1 font-bold">2</span>
+                            </div>
+                            <div>
+                                Sélectionnez <span class="font-bold">"Sur l'écran d'accueil"</span>
+                            </div>
+                        </div>
+                    ` : `
+                        <div class="flex items-start gap-3 mb-3">
+                            <div class="mt-1">
+                                <span class="bg-blue-100 text-blue-800 rounded-full px-3 py-1 font-bold">1</span>
+                            </div>
+                            <div>
+                                Appuyez sur <span class="font-bold">Menu</span> <svg class="w-5 h-5 inline" fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg> en haut à droite de votre navigateur
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <div class="mt-1">
+                                <span class="bg-blue-100 text-blue-800 rounded-full px-3 py-1 font-bold">2</span>
+                            </div>
+                            <div>
+                                Sélectionnez <span class="font-bold">"Ajouter à l'écran d'accueil"</span>
+                            </div>
+                        </div>
+                    `}
+                </div>
+            `,
+                    icon: 'info',
+                    confirmButtonText: 'Compris',
+                    showCancelButton: true,
+                    cancelButtonText: 'Ne plus afficher',
+                    backdrop: true,
+                    allowOutsideClick: false
+                }).then((result) => {
+                    // If user clicks "Don't show again"
+                    if (result.dismiss === Swal.DismissReason.cancel) {
+                        localStorage.setItem('hasShownInstallPrompt', 'true');
+                    }
+                });
+
+                // Mark as shown (will show again in 30 days)
+                localStorage.setItem('hasShownInstallPrompt', 'true');
+                setTimeout(() => {
+                    localStorage.removeItem('hasShownInstallPrompt');
+                }, 30 * 24 * 60 * 60 * 1000); // 30 days expiration
+            }
+        });
     </script>
 </body>
 
