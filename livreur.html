@@ -898,7 +898,7 @@
                 axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`;
                 axios.defaults.headers.common['Accept'] = 'application/json';
                 axios.defaults.headers.common['Content-Type'] = 'application/json';
-                axios.defaults.headers.common['X-Client-Domain'] = 'https://jibouli.lvmanager.net'//window.location.origin;
+                axios.defaults.headers.common['X-Client-Domain'] = window.location.origin;
 
                 // Set up axios interceptors
                 axios.interceptors.request.use(config => {
