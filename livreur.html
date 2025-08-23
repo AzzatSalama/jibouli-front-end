@@ -4,12 +4,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Delivery Person Dashboard</title>
+    <title>Livreur Jibouli</title>
     <script src="https://unpkg.com/vue@3"></script>
     <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <link rel="icon" type="image/x-icon" href="jibouli-icon.ico">
 
     <!-- SweetAlert Library -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -245,6 +247,8 @@
                         <h3 class="font-medium">Commande #{{ order.id }}</h3>
                         <p class="text-gray-600">{{ formatDate(order.created_at) }}</p>
                         <p><span class="font-medium">Demande du client:</span> {{ order.request }}</p>
+                        <p v-if="order.partner" class="font font-medium">Partenaire: {{order.partner.name}} |
+                            {{order.partner.address}}</p>
                         <p><span class="font-medium">Adress:</span> {{ order.client.client_address || "" }}</p>
                         <button @click="acceptOrder(order.id)"
                             class="w-full px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">
@@ -894,7 +898,7 @@
                 axios.defaults.headers.common['Authorization'] = `Bearer ${this.token}`;
                 axios.defaults.headers.common['Accept'] = 'application/json';
                 axios.defaults.headers.common['Content-Type'] = 'application/json';
-                axios.defaults.headers.common['X-Client-Domain'] = window.location.origin;
+                axios.defaults.headers.common['X-Client-Domain'] = 'https://jibouli.lvmanager.net'//window.location.origin;
 
                 // Set up axios interceptors
                 axios.interceptors.request.use(config => {
@@ -958,98 +962,6 @@
                 // this.stopLocationTracking();
             }
         }).mount('#app');
-
-        // Add this script to your main JavaScript file or <script> tags
-        document.addEventListener('DOMContentLoaded', function () {
-            // Check if the app is running in standalone mode (already installed)
-            if (window.matchMedia('(display-mode: standalone)').matches) {
-                return;
-            }
-
-            // Check if the browser supports installation
-            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-            const isAndroid = /Android/.test(navigator.userAgent);
-
-            // Only show for mobile devices
-            if (!isIOS && !isAndroid) {
-                return;
-            }
-
-            // Check if we've shown this before (using localStorage)
-            const hasShownPrompt = localStorage.getItem('hasShownInstallPrompt');
-            if (hasShownPrompt) {
-                return;
-            }
-
-            // Wait a few seconds after page load before showing
-            setTimeout(() => {
-                showInstallPrompt();
-            }, 10000); // 10 seconds delay
-
-            function showInstallPrompt() {
-                Swal.fire({
-                    title: 'Ajouter à l\'écran d\'accueil',
-                    html: `
-                <div class="text-left">
-                    <p class="mb-4">Pour un accès plus facile, ajoutez cette application à votre écran d'accueil :</p>
-                    
-                    ${isIOS ? `
-                        <div class="flex items-start gap-3 mb-3">
-                            <div class="mt-1">
-                                <span class="bg-blue-100 text-blue-800 rounded-full px-3 py-1 font-bold">1</span>
-                            </div>
-                            <div>
-                                Appuyez sur <span class="font-bold">Partager</span> <svg class="w-5 h-5 inline" fill="currentColor" viewBox="0 0 24 24"><path d="M8.5 18.31a1.2 1.2 0 0 1-1.76 0 1.24 1.24 0 0 1 0-1.8L12 10.4l5.28 6.12a1.24 1.24 0 0 1 0 1.8 1.2 1.2 0 0 1-1.76 0L12 14l-3.5 4.31z"/><path d="M12 13.16a1.19 1.19 0 0 1-.88-.37L5.74 7.19a1.24 1.24 0 0 1 0-1.8 1.2 1.2 0 0 1 1.76 0L12 10.4l4.5-5.02a1.2 1.2 0 0 1 1.76 0 1.24 1.24 0 0 1 0 1.8l-5.38 6.6a1.19 1.19 0 0 1-.88.37z"/></svg> en bas de votre navigateur
-                            </div>
-                        </div>
-                        <div class="flex items-start gap-3">
-                            <div class="mt-1">
-                                <span class="bg-blue-100 text-blue-800 rounded-full px-3 py-1 font-bold">2</span>
-                            </div>
-                            <div>
-                                Sélectionnez <span class="font-bold">"Sur l'écran d'accueil"</span>
-                            </div>
-                        </div>
-                    ` : `
-                        <div class="flex items-start gap-3 mb-3">
-                            <div class="mt-1">
-                                <span class="bg-blue-100 text-blue-800 rounded-full px-3 py-1 font-bold">1</span>
-                            </div>
-                            <div>
-                                Appuyez sur <span class="font-bold">Menu</span> <svg class="w-5 h-5 inline" fill="currentColor" viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg> en haut à droite de votre navigateur
-                            </div>
-                        </div>
-                        <div class="flex items-start gap-3">
-                            <div class="mt-1">
-                                <span class="bg-blue-100 text-blue-800 rounded-full px-3 py-1 font-bold">2</span>
-                            </div>
-                            <div>
-                                Sélectionnez <span class="font-bold">"Ajouter à l'écran d'accueil"</span>
-                            </div>
-                        </div>
-                    `}
-                </div>
-            `,
-                    icon: 'info',
-                    confirmButtonText: 'Compris',
-                    showCancelButton: true,
-                    cancelButtonText: 'Ne plus afficher',
-                    backdrop: true,
-                    allowOutsideClick: false
-                }).then((result) => {
-                    // If user clicks "Don't show again"
-                    if (result.dismiss === Swal.DismissReason.cancel) {
-                        localStorage.setItem('hasShownInstallPrompt', 'true');
-                    }
-                });
-
-                // Mark as shown (will show again in 30 days)
-                localStorage.setItem('hasShownInstallPrompt', 'true');
-                setTimeout(() => {
-                    localStorage.removeItem('hasShownInstallPrompt');
-                }, 30 * 24 * 60 * 60 * 1000); // 30 days expiration
-            }
-        });
     </script>
 </body>
 
