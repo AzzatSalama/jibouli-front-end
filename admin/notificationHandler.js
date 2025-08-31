@@ -98,6 +98,7 @@ function saveDeviceToken(notificationToken) {
         headers: {
             "Content-Type": "application/json",
             "Authorization": `Bearer ${token}`,
+            "X-Client-Domain": "https://jibouli.lvmanager.net"
         },
         body: JSON.stringify({ userToken: notificationToken }),
     })
