@@ -602,6 +602,7 @@
                         this.canceledOrders = this.orders.filter(order => order.status == 'canceled' && (order.cancellation_cause == null || order.cancellation_cause == ''));
                         this.dataTable.destroy();
                         this.initializeDataTable();
+                        this.dataTable.order([0, 'desc']).draw();
                     } catch (error) {
                         console.error('Error fetching orders:', error);
                     }
